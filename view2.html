@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8" />
+    <title>Karadeniz 55</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+        :root{--red:#b30000;--white:#fff;--muted:#4a0000;--card:#fff6f6;--radius:10px}
+        body{font-family:Inter,Arial,sans-serif;background:var(--white);color:var(--muted);margin:16px}
+        header{display:flex;justify-content:space-between;align-items:center}
+        .titleWrap{display:flex;align-items:center;gap:6px}
+        h1{color:var(--red);margin:0;font-size:1.4rem;line-height:1}
+        #timeInput{display:none;width:auto;min-width:64px;padding:6px 10px;border-radius:8px;border:1px solid rgba(179,0,0,0.12);text-align:center;font-weight:700;color:#b30000;font-size:1.4rem;line-height:1;height:calc(1.4rem + 12px);box-sizing:border-box}
+        .wrap{max-width:900px;margin:18px auto}
+        .card{background:var(--card);border:1px solid rgba(179,0,0,0.12);padding:12px;border-radius:var(--radius);margin-bottom:10px;transition:background 0.6s}
+        .card{ touch-action: pan-y; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; cursor: pointer; }
+        .meta{font-size:0.9rem;color:#6a0000}
+        .row{display:flex;justify-content:space-between;gap:12px;align-items:center}
+        .name{font-weight:700;color:var(--red)}
+        .extras{color:#5a0000;margin-top:6px}
+        .count{background:var(--red);color:#fff;padding:6px 10px;border-radius:8px;font-weight:700}
+        .refresh{background:transparent;border:1px solid var(--red);color:var(--red);padding:8px 12px;border-radius:8px;cursor:pointer}
+        .empty{padding:20px;text-align:center;border:1px dashed rgba(179,0,0,0.12);border-radius:8px}
+        .highlight { background: #fff2f2 !important; box-shadow: inset 0 0 0 2px rgba(179,0,0,0.06); }
+        .card.holding { opacity: 0.92; transform: scale(0.998); }
+        .small { font-size:0.85rem; color:#6a0000; margin-top:6px; }
+        .status-done { background: #fff8dc !important; border-left: 6px solid #ffe066; }
+        .status-pickedup { background: #ecfff0 !important; border-left: 6px solid #b6fcb6; }
+        .status-unset { background: #fff !important; border-left: 6px solid rgba(179,0,0,0.06); }
+        .group-card.status-done .count { background: #ffe066; color: #000; }
+        .group-card.status-pickedup .count { background: #b6fcb6; color: #000; }
+        .group-card.status-unset .count { background: var(--red); }
+        .big { font-size: 4.0rem; font-weight: 700; color: #000;}
+        /* Neue Styles für geblockte Bestellungen */
+        .blocked { background: #f2f2f2 !important; color: #333 !important; opacity: 0.95; border-left: 6px solid #c0c0c0; }
+        .blocked .member-item { background: #efefef !important; color: #333 !important; }
+        .blockBtn, .unblockBtn { border: none; padding: 6px 8px; border-radius:6px; font-weight:700; cursor:pointer; margin-top:6px; }
+        .blockBtn { background: #b30000; color: #fff; }
+        .unblockBtn { background: #6a6a6a; color: #fff; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <header>
+        <div class="titleWrap">
+            <h1>Bestellübersicht</h1>
+            <input id="timeInput" type="text" inputmode="numeric" pattern="[0-9]*" title="Zeit (Sekunden)" placeholder="20">
+            <p id="getti">0x Fl; 0x Yu; 0xP</p>
+
+
+            <div id="force0101Wrap" style="display:none;align-items:center;gap:8px;margin-left:8px;">
+                <label style="display:inline-flex;align-items:center;gap:8px;margin-left:8px;"><span style="font-size:0.85rem;color:#6a0000;">Blocked</span><span style="position:relative;display:inline-block;width:64px;height:34px;border-radius:22px;background:#eee;border:1px solid rgba(0,0,0,0.06);padding:3px;box-sizing:border-box;cursor:pointer;" onclick="(function(t){const inp=t.querySelector('input'); inp.checked=!inp.checked; inp.dispatchEvent(new Event('change'));})(this)"><input id="force0101Toggle" type="checkbox" aria-label="0101 erzwingen" style="position:absolute;opacity:0;left:0;top:0;width:100%;height:100%;margin:0;" onchange="(function(el){const track=el.parentElement;const thumb=track.querySelector('[data-thumb]');const onL=track.querySelector('[data-label-on]');const offL=track.querySelector('[data-label-off]'); if(el.checked){ track.style.background='linear-gradient(180deg,#c6ffd6,#b6fcb6)'; track.style.borderColor='#9feaa0'; thumb.style.transform='translateX(30px)'; onL.style.opacity='1'; offL.style.opacity='0'; } else { track.style.background='#eee'; track.style.borderColor='rgba(0,0,0,0.06)'; thumb.style.transform='translateX(0)'; onL.style.opacity='0'; offL.style.opacity='1'; } })(this)"><span data-thumb style="display:inline-block;width:28px;height:28px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.12);transition:transform .18s;transform:translateX(0);"></span><span data-label-off style="position:absolute;left:6px;right:6px;text-align:center;font-weight:800;font-size:11px;color:#b30000;pointer-events:none;transition:opacity .14s;opacity:1;">AUS</span><span data-label-on style="position:absolute;left:6px;right:6px;text-align:center;font-weight:800;font-size:11px;color:#006400;pointer-events:none;transition:opacity .14s;opacity:0;">AN</span></span></label>
+
+            </div>
+        </div>
+        <div>
+            <button id="loginBtn" style="background:#b30000;color:#fff;border:none;padding:8px 18px;border-radius:8px;font-weight:700;cursor:pointer;margin-left:8px;">Login</button>
+            <button id="logoutBtn" style="display:none;background:#888;color:#fff;border:none;padding:8px 18px;border-radius:8px;font-weight:700;cursor:pointer;margin-left:8px;">Logout</button>
+            <button id="blockedBtn" style="display:none;background:#6a6a6a;color:#fff;border:none;padding:8px 12px;border-radius:8px;font-weight:700;cursor:pointer;margin-left:8px;">Blocked</button>
+            <button id="audioPermissionBtn" style="display:none;background:#006400;color:#fff;border:none;padding:8px 12px;border-radius:8px;font-weight:700;cursor:pointer;margin-left:8px;">Audio erlauben und testen</button>
+            <button id="notifyBtn" style="background:#006400;color:#fff;border:none;padding:6px 10px;border-radius:8px;font-weight:700;cursor:pointer;margin-left:8px;">Benachr. aktivieren</button>
+        </div>
+    </header>
+    <!-- Blocked list modal -->
+    <div id="blockedModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:2000;align-items:center;justify-content:center;">
+        <div style="background:#fff;padding:18px;border-radius:12px;max-width:900px;width:calc(100% - 40px);max-height:80vh;overflow:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <h3 style="margin:0;color:#b30000">Geblockte IPs</h3>
+                <div><button id="closeBlockedModal" style="background:#b30000;color:#fff;border:none;padding:6px 10px;border-radius:8px;cursor:pointer">Schließen</button></div>
+            </div>
+            <div id="blockedListContainer" style="min-height:60px;color:#6a0000"></div>
+        </div>
+    </div>
+    <main id="list" style="margin-top:14px"></main>
+</div>
+<div id="loginOverlay" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.35);z-index:1000;align-items:center;justify-content:center;">
+    <form id="loginForm" style="background:#fff;padding:32px 28px;border-radius:12px;box-shadow:0 2px 16px #0002;min-width:260px;display:flex;flex-direction:column;gap:12px;">
+        <h2 style="margin:0 0 8px 0;color:#b30000;font-size:1.2rem;">Admin Login</h2>
+        <label>Benutzername<input type="text" id="loginUser" required autocomplete="username"></label>
+        <label>Passwort<input type="password" id="loginPass" required autocomplete="current-password"></label>
+        <button type="submit" style="background:#b30000;color:#fff;border:none;padding:8px 0;border-radius:8px;font-weight:700;">Anmelden</button>
+        <div id="loginMsg" style="color:#b30000;font-weight:600;text-align:center;"></div>
+    </form>
+</div>
+<script>
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const loginOverlay = document.getElementById('loginOverlay');
+    const loginForm = document.getElementById('loginForm');
+    const loginMsg = document.getElementById('loginMsg');
+    const loginUser = document.getElementById('loginUser');
+    const loginPass = document.getElementById('loginPass');
+    let isAdmin = false;
+    let csrfToken = null;
+    let isAtTop = false;
+    function showLoginOverlay() {
+        loginOverlay.style.display = 'flex';
+        loginMsg.textContent = '';
+        loginUser.value = '';
+        loginPass.value = '';
+        loginUser.focus();
+    }
+    function checkandscroll() {
+        if (isAtTop) {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+    }
+    function hideLoginOverlay() {
+        loginOverlay.style.display = 'none';
+    }
+    function setAdminUI(loggedIn) {
+        isAdmin = loggedIn;
+        loginBtn.style.display = loggedIn ? 'none' : '';
+        logoutBtn.style.display = loggedIn ? '' : 'none';
+        const timeInput = document.getElementById('timeInput');
+        if(timeInput){
+            timeInput.style.display = loggedIn ? 'inline-block' : 'none';
+        }
+        const forceWrap = document.getElementById('force0101Wrap');
+        if(forceWrap) forceWrap.style.display = loggedIn ? 'inline-flex' : 'none';
+        try{ const bb = document.getElementById('blockedBtn'); if(bb) bb.style.display = loggedIn ? '' : 'none'; }catch(e){}
+    }
+    loginBtn.onclick = showLoginOverlay;
+    logoutBtn.onclick = function() {
+        localStorage.removeItem('kara_user');
+        localStorage.removeItem('kara_pass');
+        setAdminUI(false);
+        renderList(lastItemsCache||[]);
+    };
+    const blockedBtn = document.getElementById('blockedBtn');
+    const blockedModal = document.getElementById('blockedModal');
+    const closeBlockedModal = document.getElementById('closeBlockedModal');
+    if(blockedBtn) blockedBtn.addEventListener('click', showBlockedModal);
+    if(closeBlockedModal) closeBlockedModal.addEventListener('click', ()=>{ if(blockedModal) blockedModal.style.display='none'; });
+    if(blockedModal) blockedModal.addEventListener('click', (e)=>{ if(e.target===blockedModal) blockedModal.style.display='none'; });
+    let loginCountdownInterval = null;
+    function startLoginCountdown(seconds) {
+        let remaining = seconds;
+        loginUser.disabled = true;
+        loginPass.disabled = true;
+        loginForm.querySelector('button[type="submit"]').disabled = true;
+        updateLoginMsgCountdown(remaining);
+        if (loginCountdownInterval) clearInterval(loginCountdownInterval);
+        loginCountdownInterval = setInterval(() => {
+            remaining--;
+            updateLoginMsgCountdown(remaining);
+            if (remaining <= 0) {
+                clearInterval(loginCountdownInterval);
+                loginUser.disabled = false;
+                loginPass.disabled = false;
+                loginForm.querySelector('button[type="submit"]').disabled = false;
+                loginMsg.textContent = '';
+            }
+        }, 1000);
+    }
+    function updateLoginMsgCountdown(remaining) {
+        loginMsg.textContent = `Zu viele Fehlversuche. Bitte warte ${remaining} Sekunden.`;
+    }
+
+    loginForm.onsubmit = async function(e){
+        e.preventDefault();
+        loginMsg.textContent = '';
+        if (loginUser.disabled || loginPass.disabled) return;
+        const res = await fetch('login.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: loginUser.value, password: loginPass.value }),
+            credentials: 'include'
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            csrfToken = data.csrf_token || null;
+            localStorage.setItem('kara_csrf', csrfToken || '');
+            localStorage.setItem('kara_user', loginUser.value);
+            localStorage.setItem('kara_pass', loginPass.value);
+            hideLoginOverlay();
+            setAdminUI(true);
+            load(true);
+            try{ await loadBlockedList(); }catch(e){}
+            startAutoRefresh();
+            try{ loadTimeSetting(); alignTimeInput(); }catch(e){}
+        } else if (data.wait_seconds) {
+            startLoginCountdown(data.wait_seconds);
+        } else {
+            loginMsg.textContent = data.message || 'Login fehlgeschlagen.';
+        }
+    };
+    async function tryAutoLogin() {
+        const username = localStorage.getItem('kara_user');
+        const password = localStorage.getItem('kara_pass');
+        if(!username || !password) {
+            setAdminUI(false);
+            return false;
+        }
+        try {
+            const res = await fetch('login.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username, password}),
+                credentials: 'include'
+            });
+            const data = await res.json();
+            if(data.status === 'success'){
+                csrfToken = data.csrf_token || null;
+                localStorage.setItem('kara_csrf', csrfToken || '');
+                setAdminUI(true);
+                try{ await loadBlockedList(); }catch(e){}
+                return true;
+            } else {
+                setAdminUI(false);
+                return false;
+            }
+        } catch (e) {
+            setAdminUI(false);
+            return false;
+        }
+    }
+    let lastItemsCache = [];
+    let lastIds = new Set();
+
+    const TONE_SRC = 'ton.mp3';
+    const SEEN_IDS_KEY = 'kara_seen_ids';
+    let _seenIdsFromSession;
+    try{
+        const raw = sessionStorage.getItem(SEEN_IDS_KEY);
+        _seenIdsFromSession = raw ? new Set(JSON.parse(raw)) : null;
+    }catch(e){ _seenIdsFromSession = null; }
+    let seenInitialized = _seenIdsFromSession !== null;
+    let seenIds = _seenIdsFromSession || new Set();
+    function persistSeenIds(){
+        try{ sessionStorage.setItem(SEEN_IDS_KEY, JSON.stringify(Array.from(seenIds))); }catch(e){}
+    }
+
+    function playSingleTone(){
+        try{
+            const a = new Audio(TONE_SRC);
+            a.volume = 0.9;
+            a.play().catch(()=>{});
+            return true;
+        }catch(e){ return false; }
+    }
+
+    function playToneRepeated(times){
+        for(let i=0;i<times;i++){
+            setTimeout(()=>{
+                try{ const a = new Audio(TONE_SRC); a.volume = 0.9; a.play().catch(()=>{}); }catch(e){}
+            }, i*400);
+        }
+    }
+
+    function isSecureForNotifications(){
+        try{
+            if(window.isSecureContext) return true;
+            const h = location.hostname;
+            if(!h) return false;
+            if(h === 'localhost' || h === '127.0.0.1' || h === '::1') return true;
+            return false;
+        }catch(e){return false;}
+    }
+
+    async function requestNotificationPermissionInteractive(){
+        if(typeof Notification === 'undefined') return 'unsupported';
+        try{
+            const p = await Notification.requestPermission();
+            return p;
+        }catch(e){
+            try{ return Notification.permission || 'default'; }catch(e){ return 'default'; }
+        }
+    }
+
+    async function showOrdersNotification(count, sampleNames){
+        try{
+            if(typeof Notification === 'undefined') return false;
+            if(Notification.permission !== 'granted') return false;
+            const title = count === 1 ? 'Neue Bestellung' : `Neue Bestellungen (${count})`;
+            let body = '';
+            if(Array.isArray(sampleNames) && sampleNames.length > 0){
+                body = sampleNames.slice(0,3).join(', ');
+                if(sampleNames.length > 3) body += ' …';
+            } else {
+                body = `${count} neue Bestellung(en).`;
+            }
+            try{
+                const reg = await getActiveSWRegistration();
+                if(reg && reg.showNotification){
+                    await reg.showNotification(title, {
+                        body,
+                        tag: 'kara-new-orders-v1',
+                        renotify: true,
+                        data: { count },
+                    });
+                    try{ if(navigator.vibrate) navigator.vibrate([200,100,200]); }catch(e){}
+                    return true;
+                }
+            }catch(e){ /* fall back to page Notification below */ }
+            try{
+                const n = new Notification(title, {
+                    body,
+                    tag: 'kara-new-orders-v1',
+                    renotify: true
+                });
+                n.onclick = function(){ try{ window.focus(); }catch(e){} try{ n.close(); }catch(e){} };
+                try{ if(navigator.vibrate) navigator.vibrate([200,100,200]); }catch(e){}
+                return true;
+            }catch(e){
+                try{
+                    showInPageToast(title + '\n' + body);
+                }catch(_){}
+                return false;
+            }
+        }catch(e){ return false; }
+    }
+    function showInPageToast(message){
+        try{
+            let t = document.getElementById('kara-toast');
+            if(!t){
+                t = document.createElement('div');
+                t.id = 'kara-toast';
+                t.style.position = 'fixed';
+                t.style.left = '12px';
+                t.style.right = '12px';
+                t.style.bottom = '12px';
+                t.style.background = '#b30000';
+                t.style.color = '#fff';
+                t.style.padding = '12px';
+                t.style.borderRadius = '10px';
+                t.style.boxShadow = '0 6px 18px rgba(0,0,0,0.25)';
+                t.style.zIndex = 9999;
+                t.style.whiteSpace = 'pre-line';
+                t.style.fontWeight = '700';
+                document.body.appendChild(t);
+            }
+            t.textContent = message;
+            t.style.opacity = '1';
+            setTimeout(()=>{
+                try{ t.style.transition = 'opacity 0.5s'; t.style.opacity = '0'; setTimeout(()=>{ try{ t.remove(); }catch(e){} },600); }catch(e){}
+            }, 2500);
+        }catch(e){}
+    }
+    (async function registerServiceWorker(){
+        try{
+            if(!('serviceWorker' in navigator)){
+                console.info('ServiceWorker not supported in this browser.');
+                return;
+            }
+            if(!isSecureForNotifications()){
+                console.info('Not a secure context; service worker registration skipped.');
+                return;
+            }
+            try{
+                console.info('Attempting service-worker registration at /service-worker.js with scope /.');
+                await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
+                console.info('Service worker registered at /service-worker.js');
+                return;
+            }catch(rootErr){
+                console.warn('Registration at /service-worker.js failed:', rootErr);
+            }
+            try{
+                const rel = (location.pathname || '/').replace(/\/[^/]*$/, '/') + 'service-worker.js';
+                console.info('Attempting service-worker registration at', rel);
+                await navigator.serviceWorker.register(rel);
+                console.info('Service worker registered at', rel);
+                return;
+            }catch(relErr){
+                console.error('Relative service worker registration also failed:', relErr);
+            }
+        }catch(e){
+            console.error('Unexpected error during service worker registration:', e);
+        }
+    })();
+    async function getActiveSWRegistration(){
+        try{
+            if(!('serviceWorker' in navigator)) return null;
+            const reg = await navigator.serviceWorker.ready;
+            return reg || null;
+        }catch(e){ return null; }
+    }
+
+    async function requestAudioAndNotification(){
+        const btn = document.getElementById('audioPermissionBtn');
+        try{
+            if(typeof Notification !== 'undefined' && Notification.permission !== 'granted'){
+                try{ await Notification.requestPermission(); }catch(e){}
+            }
+            playSingleTone();
+            try{
+                if(btn){
+                    const notifOk = (typeof Notification !== 'undefined' && Notification.permission === 'granted');
+                    if(notifOk) btn.style.display = 'none';
+                }
+            }catch(e){}
+            return true;
+        }catch(e){ if(btn) btn.style.display = ''; return false; }
+    }
+
+    (function initAudioAndNotificationOnLoad(){
+        setTimeout(async ()=>{
+            try{
+                let audioOk = false;
+                try{ audioOk = playSingleTone(); }catch(e){ audioOk = false; }
+                const notifOk = (typeof Notification !== 'undefined' && Notification.permission === 'granted');
+                const btn = document.getElementById('audioPermissionBtn');
+                const nbtn = document.getElementById('notifyBtn');
+                if(!audioOk || !notifOk){ if(btn) btn.style.display = ''; }
+                if(!notifOk){ if(nbtn) nbtn.style.display = ''; }
+                // If notifications are unsupported or origin not secure, show a hint on the notify button
+                if(nbtn){
+                    if(typeof Notification === 'undefined'){
+                        nbtn.title = 'Benachrichtigungen werden vom Browser nicht unterstützt';
+                    } else if(!isSecureForNotifications()){
+                        nbtn.title = 'Für Browser-Benachrichtigungen ist HTTPS oder localhost erforderlich';
+                    }
+                }
+            }catch(e){ const btn = document.getElementById('audioPermissionBtn'); if(btn) btn.style.display = ''; }
+        }, 350);
+    })();
+
+    const audioPermissionBtn = document.getElementById('audioPermissionBtn');
+    if(audioPermissionBtn){
+        audioPermissionBtn.textContent = 'Audio & Benachrichtigungen erlauben';
+        audioPermissionBtn.style.display = 'none';
+        audioPermissionBtn.addEventListener('click', async function(){
+            audioPermissionBtn.disabled = true;
+            const prevText = audioPermissionBtn.textContent;
+            audioPermissionBtn.textContent = 'Teste…';
+            const ok = await requestAudioAndNotification();
+            if(ok){
+                audioPermissionBtn.textContent = 'Erlaubnis erhalten';
+                setTimeout(()=>{ audioPermissionBtn.style.display = 'none'; }, 900);
+            } else {
+                audioPermissionBtn.textContent = prevText || 'Audio & Benachrichtigungen erlauben';
+                audioPermissionBtn.disabled = false;
+            }
+        });
+    }
+
+    const notifyBtn = document.getElementById('notifyBtn');
+    if(notifyBtn){
+        notifyBtn.addEventListener('click', async function(){
+            notifyBtn.disabled = true;
+            try{
+                if(typeof Notification === 'undefined'){
+                    alert('Ihr Browser unterstützt keine Web-Benachrichtigungen.');
+                    notifyBtn.disabled = false;
+                    return;
+                }
+                if(!isSecureForNotifications()){
+                    alert('Benachrichtigungen benötigen HTTPS oder localhost; bitte Seite über HTTPS/localhost öffnen.');
+                    notifyBtn.disabled = false;
+                    return;
+                }
+                const perm = await requestNotificationPermissionInteractive();
+                if(perm !== 'granted'){
+                    alert('Benachrichtigungen nicht erteilt. Bitte Erlaubnis im Browser zulassen.');
+                    notifyBtn.disabled = false;
+                    return;
+                }
+                try{ showOrdersNotification(1, ['Testbestellung']); }catch(e){}
+                try{ playSingleTone(); }catch(e){}
+                setTimeout(()=>{ try{ notifyBtn.style.display = 'none'; }catch(e){} }, 800);
+            }catch(e){ console.error('notifyBtn handler error', e); }
+            setTimeout(()=>{ notifyBtn.disabled = false; }, 800);
+        });
+    }
+
+    async function safeParseJson(res){
+        try{ return await res.json(); }catch(e){
+            try{ const txt = await res.text(); return { status: 'error', message: 'Ungültige Server-Antwort: '+txt }; }catch(e2){ return { status: 'error', message: 'Ungültige Server-Antwort' }; }
+        }
+    }
+
+    async function ensureAdminSession(){
+        csrfToken = csrfToken || localStorage.getItem('kara_csrf');
+        const username = localStorage.getItem('kara_user');
+        const password = localStorage.getItem('kara_pass');
+        if(csrfToken && username && password && isAdmin) return true;
+        if(username && password){
+            const ok = await tryAutoLogin();
+            if(ok){
+                csrfToken = csrfToken || localStorage.getItem('kara_csrf');
+                setAdminUI(true);
+                return true;
+            }
+        }
+        showLoginOverlay();
+        return false;
+    }
+    function normalizeStatus(status){
+        return status && status !== '' ? status : 'unset';
+    }
+    function applyStatusToArticlesForId(id, status){
+        try{
+            const s = normalizeStatus(status);
+            const articles = Array.from(document.querySelectorAll('article.group-card'));
+            articles.forEach(a => {
+                const dataIds = a.getAttribute('data-ids') || '';
+                if(dataIds.indexOf(id) !== -1){
+                    a.classList.remove('status-done','status-pickedup','status-unset');
+                    a.classList.add('status-' + s);
+                    a.querySelectorAll('.member-item').forEach(mi => {
+                        mi.classList.remove('status-done','status-pickedup','status-unset');
+                        mi.classList.add('status-' + s);
+                    });
+                }
+            });
+        }catch(e){console.error('applyStatusToArticlesForId error', e);}    }
+    function removeMemberFromArticles(orderObj){
+        try{
+            const {id, timestamp, name, menge} = orderObj || {};
+            const articles = Array.from(document.querySelectorAll('article.group-card'));
+            for(const a of articles){
+                const dataIds = a.getAttribute('data-ids') || '';
+                if(dataIds.indexOf(id) !== -1){
+                    const members = Array.from(a.querySelectorAll('.member-item'));
+                    let removed = false;
+                    for(const mi of members){
+                        const txt = mi.textContent || '';
+                        const nameMatch = name ? txt.indexOf(String(name)) !== -1 : true;
+                        const mengeMatch = menge ? txt.indexOf(String(menge)) !== -1 : true;
+                        const timeMatch = timestamp ? txt.indexOf(new Date(timestamp).toLocaleString('de-DE')) !== -1 : true;
+                        if(nameMatch && mengeMatch && timeMatch){
+                            mi.remove();
+                            removed = true;
+                            break;
+                        }
+                    }
+                    if(!removed && members.length > 0){
+                        members[0].remove();
+                    }
+                    if(a.querySelectorAll('.member-item').length === 0){
+                        a.remove();
+                    }
+                }
+            }
+        }catch(e){console.error('removeMemberFromArticles error', e);}    }
+
+
+    async function adminDeleteOrder(orderObj){
+        if(!await ensureAdminSession()) return;
+        csrfToken = csrfToken || localStorage.getItem('kara_csrf');
+        const {id, timestamp, name, menge} = orderObj;
+        let res;
+        try{
+            res = await fetch('delete_order.php',{ method:'POST', headers:{'Content-Type':'application/json','X-CSRF-Token':csrfToken}, credentials: 'include', body:JSON.stringify({id, timestamp, name, menge}) });
+        }catch(e){ alert('Netzwerkfehler beim Löschen'); return; }
+        if(res.status === 401){ showLoginOverlay(); alert('Sitzung abgelaufen. Bitte neu einloggen.'); return; }
+        const data = await safeParseJson(res);
+        if(!data || data.status !== 'success'){
+            alert('Fehler beim Löschen: ' + (data && data.message ? data.message : 'Unbekannter Fehler'));
+            if(data && typeof data.message === 'string' && data.message.toLowerCase().includes('nicht autorisiert')){
+                showLoginOverlay();
+            }
+            return;
+        }
+        removeMemberFromArticles(orderObj);
+        setTimeout(()=>{ load(false); }, 900);
+    }
+    async function adminUpdateOrder(orderObj, status){
+        if(!await ensureAdminSession()) return;
+        csrfToken = csrfToken || localStorage.getItem('kara_csrf');
+        const {id, timestamp, name, menge} = orderObj;
+        let res;
+        try{
+            res = await fetch('update_order.php',{ method:'POST', headers:{'Content-Type':'application/json','X-CSRF-Token':csrfToken}, credentials: 'include', body:JSON.stringify({id, timestamp, name, menge, status}) });
+        }catch(e){ alert('Netzwerkfehler beim Aktualisieren'); return; }
+        if(res.status === 401){ showLoginOverlay(); alert('Sitzung abgelaufen. Bitte neu einloggen.'); return; }
+        const data = await safeParseJson(res);
+        if(!data || data.status !== 'success'){
+            alert('Fehler beim Status-Update: ' + (data && data.message ? data.message : 'Unbekannter Fehler'));
+            if(data && typeof data.message === 'string' && data.message.toLowerCase().includes('nicht autorisiert')){
+                showLoginOverlay();
+            }
+            return;
+        }
+        applyStatusToArticlesForId(id, status);
+        setTimeout(()=>{ load(false); }, 900);
+    }
+
+    async function adminBlockIp(ip){
+        if(!ip) return;
+        if(!await ensureAdminSession()) return;
+        csrfToken = csrfToken || localStorage.getItem('kara_csrf');
+        try{
+            const res = await fetch('blockUser.php', { method: 'POST', credentials: 'include', headers: {'Content-Type':'application/json','X-CSRF-Token':csrfToken}, body: JSON.stringify({ action: 'block', ip }) });
+            if(res.status === 401){ showLoginOverlay(); alert('Sitzung abgelaufen. Bitte neu einloggen.'); return; }
+            const data = await safeParseJson(res);
+            if(data && data.status === 'success'){
+                await load(false);
+                try{ await loadBlockedList(); }catch(e){}
+            } else {
+                alert('Fehler beim Blocken: ' + (data && data.message ? data.message : 'Unbekannter Fehler'));
+            }
+        }catch(e){ alert('Netzwerkfehler beim Blocken'); }
+    }
+    async function adminUnblockIp(ip){
+        if(!ip) return;
+        if(!await ensureAdminSession()) return;
+        csrfToken = csrfToken || localStorage.getItem('kara_csrf');
+        try{
+            const res = await fetch('blockUser.php', { method: 'POST', credentials: 'include', headers: {'Content-Type':'application/json','X-CSRF-Token':csrfToken}, body: JSON.stringify({ action: 'unblock', ip }) });
+            if(res.status === 401){ showLoginOverlay(); alert('Sitzung abgelaufen. Bitte neu einloggen.'); return; }
+            const data = await safeParseJson(res);
+            if(data && data.status === 'success'){
+                await load(false);
+                try{ await loadBlockedList(); }catch(e){}
+            } else {
+                alert('Fehler beim Entblocken: ' + (data && data.message ? data.message : 'Unbekannter Fehler'));
+            }
+        }catch(e){ alert('Netzwerkfehler beim Entblocken'); }
+    }
+
+    async function adminUpdateOrdersBatch(members, status){
+        if(!await ensureAdminSession()) return;
+        csrfToken = csrfToken || localStorage.getItem('kara_csrf');
+        for(const m of members){
+            try{
+                const it = m.it || m;
+                const {id, timestamp, name, menge} = it;
+                const res = await fetch('update_order.php',{ method:'POST', headers:{'Content-Type':'application/json','X-CSRF-Token':csrfToken}, credentials: 'include', body:JSON.stringify({id, timestamp, name, menge, status}) });
+                if(res.status === 401){ showLoginOverlay(); alert('Sitzung abgelaufen. Bitte neu einloggen.'); return; }
+                const data = await safeParseJson(res);
+                if(!data || data.status !== 'success'){
+                    console.warn('Update fehlgeschlagen für', it, data);
+                } else {
+                    applyStatusToArticlesForId(id, status);
+                }
+            }catch(e){ console.error('Fehler beim Batch-Update', e); }
+        }
+        setTimeout(()=>{ load(false); }, 1000);
+    }
+    async function adminDeleteOrdersBatch(members){
+        if(!await ensureAdminSession()) return;
+        csrfToken = csrfToken || localStorage.getItem('kara_csrf');
+        for(const m of members){
+            try{
+                const it = m.it || m;
+                const {id, timestamp, name, menge} = it;
+                const res = await fetch('delete_order.php',{ method:'POST', headers:{'Content-Type':'application/json','X-CSRF-Token':csrfToken}, credentials: 'include', body:JSON.stringify({id, timestamp, name, menge}) });
+                if(res.status === 401){ showLoginOverlay(); alert('Sitzung abgelaufen. Bitte neu einloggen.'); return; }
+                const data = await safeParseJson(res);
+                if(!data || data.status !== 'success'){
+                    console.warn('Löschen fehlgeschlagen für', it, data);
+                } else {
+                    removeMemberFromArticles(it);
+                }
+            }catch(e){ console.error('Fehler beim Batch-Löschen', e); }
+        }
+        setTimeout(()=>{ load(false); }, 1000);
+    }
+    let contextMenuEl = null;
+    function showContextMenu(x, y, actions) {
+        if(contextMenuEl) contextMenuEl.remove();
+        contextMenuEl = document.createElement('div');
+        contextMenuEl.style.position = 'fixed';
+        contextMenuEl.style.left = x+'px';
+        contextMenuEl.style.top = y+'px';
+        contextMenuEl.style.background = '#fff';
+        contextMenuEl.style.border = '1px solid #b30000';
+        contextMenuEl.style.borderRadius = '8px';
+        contextMenuEl.style.boxShadow = '0 2px 12px #0002';
+        contextMenuEl.style.zIndex = 2000;
+        contextMenuEl.style.minWidth = '140px';
+        actions.forEach (a => {
+            const btn = document.createElement('button');
+            btn.textContent = a.label;
+            btn.style.display = 'block';
+            btn.style.width = '100%';
+            btn.style.background = a.color;
+            btn.style.color = '#fff';
+            btn.style.border = 'none';
+            btn.style.padding = '10px';
+            btn.style.fontWeight = '700';
+            btn.style.cursor = 'pointer';
+            btn.onmousedown = e => { e.preventDefault(); a.action(); hideContextMenu(); };
+            contextMenuEl.appendChild(btn);
+        });
+        document.body.appendChild(contextMenuEl);
+        document.addEventListener('mousedown', hideContextMenu, {once:true});
+    }
+    function hideContextMenu() {
+        if(contextMenuEl) contextMenuEl.remove();
+        contextMenuEl = null;
+    }
+    let saveTimer = null;
+    function saveScrollIdDebounced(){
+        if(saveTimer) clearTimeout(saveTimer);
+        saveTimer = setTimeout(saveVisibleId, 150);
+    }
+    document.addEventListener('scroll', saveScrollIdDebounced, {passive:true});
+    document.addEventListener('touchmove', saveScrollIdDebounced, {passive:true});
+    window.addEventListener('beforeunload', saveVisibleId);
+    function saveVisibleId(){
+        if(window.scrollY <= 10){
+            try{ sessionStorage.setItem('kara_scroll_top', '1'); }catch(e){}
+            try{ sessionStorage.removeItem(SCROLL_KEY); }catch(e){}
+            try{ sessionStorage.removeItem('kara_scroll_pos'); }catch(e){}
+            try{ sessionStorage.removeItem('kara_scroll_offset'); }catch(e){}
+            return;
+        } else {
+            try{ sessionStorage.removeItem('kara_scroll_top'); }catch(e){}
+        }
+        const articles = Array.from(document.querySelectorAll('#list article'));
+        if(!articles.length){
+            try{ sessionStorage.removeItem(SCROLL_KEY); }catch(e){}
+            try{ sessionStorage.removeItem('kara_scroll_pos'); }catch(e){}
+            try{ sessionStorage.removeItem('kara_scroll_offset'); }catch(e){}
+            return;
+        }
+        const viewportCenter = window.innerHeight / 2;
+        let minDist = Infinity;
+        let chosen = articles[0];
+        for(const a of articles){
+            const r = a.getBoundingClientRect();
+            const articleCenter = (r.top + r.bottom) / 2;
+            const dist = Math.abs(articleCenter - viewportCenter);
+            if(dist < minDist){
+                minDist = dist;
+                chosen = a;
+            }
+        }
+        const id = chosen.getAttribute('data-id');
+        if(id) sessionStorage.setItem(SCROLL_KEY, id);
+        try{ sessionStorage.setItem('kara_scroll_pos', String(window.scrollY)); }catch(e){}
+        try{ sessionStorage.setItem('kara_scroll_offset', String(chosen.getBoundingClientRect().top)); }catch(e){}
+    }
+
+    function restoreScrollPosition(container) {
+        try{
+            try{
+                const topFlag = sessionStorage.getItem('kara_scroll_top');
+                if(topFlag === '1'){
+                    try{ window.scrollTo({ top: 0, behavior: 'auto' }); }catch(e){ window.scrollTo(0,0); }
+                    return;
+                }
+                if(isAtTop){
+                    setTimeout(() => {
+                        try{ window.scrollTo({ top: 0, behavior: 'auto' }); }catch(e){ window.scrollTo(0,0); }
+                    }, 500);
+                    return;
+                }
+            }catch(e){}
+            const id = sessionStorage.getItem(SCROLL_KEY);
+            const offsetRaw = sessionStorage.getItem('kara_scroll_offset');
+            if(id && offsetRaw !== null){
+                const el = container.querySelector(`[data-id="${CSS.escape(id)}"]`);
+                const offset = parseFloat(offsetRaw);
+                if(el && !Number.isNaN(offset)){
+                    const tryRestoreWithOffset = () => {
+                        const rect = el.getBoundingClientRect();
+                        const desired = Math.round(window.scrollY + rect.top - offset);
+                        let tries = 0;
+                        const maxTries = 20;
+                        const doScroll = () => {
+                            try{ window.scrollTo({ top: desired, behavior: 'auto' }); }catch(e){ window.scrollTo(0, desired); }
+                            tries++;
+                            if(Math.abs(window.scrollY - desired) > 2 && tries < maxTries){
+                                requestAnimationFrame(doScroll);
+                            } else {
+                                try{ sessionStorage.removeItem('kara_scroll_pos'); sessionStorage.removeItem('kara_scroll_offset'); }catch(e){}
+                            }
+                        };
+                        requestAnimationFrame(doScroll);
+                        setTimeout(()=>{
+                            try{ window.scrollTo({ top: Math.round(window.scrollY + el.getBoundingClientRect().top - offset), behavior: 'auto' }); }catch(e){}
+                        }, 300);
+                        return true;
+                    };
+                    if(tryRestoreWithOffset()) return;
+                }
+            }
+        }catch(e){ /* ignore and fallback to id-based restore */ }
+
+        const idOnly = sessionStorage.getItem(SCROLL_KEY);
+        if (!idOnly) return;
+        const elOnly = container.querySelector(`[data-id="${CSS.escape(idOnly)}"]`);
+        if (elOnly) {
+            const rect = elOnly.getBoundingClientRect();
+            const desired = Math.round(window.scrollY + rect.top - 40);
+            let tries = 0;
+            const maxTries = 20;
+            const tryScrollEl = () => {
+                try{ window.scrollTo({ top: desired, behavior: 'auto' }); }catch(e){ window.scrollTo(0, desired); }
+                tries++;
+                if(Math.abs(window.scrollY - desired) > 2 && tries < maxTries){
+                    requestAnimationFrame(tryScrollEl);
+                } else {
+                    try{ sessionStorage.removeItem('kara_scroll_pos'); sessionStorage.removeItem('kara_scroll_offset'); }catch(e){}
+                }
+            };
+            requestAnimationFrame(tryScrollEl);
+        }
+    }
+
+    function escapeHtml(s){
+        return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+    }
+    function countWordInItems(items, regex){
+        const re = regex instanceof RegExp ? regex : new RegExp(regex, 'giu');
+        if(typeof items === 'string'){
+            try{ const parsed = JSON.parse(items); if(Array.isArray(parsed)) items = parsed; }
+            catch(e){ return (String(items).match(re) || []).length; }
+        }
+        if(!Array.isArray(items)) return 0;
+        return items.reduce((sum, it) => {
+            try{
+                if(!it || Object.prototype.hasOwnProperty.call(it, 'status')) return sum;
+                const qtyVal = (it && (it.menge ?? it.qty ?? it.quantity));
+                const mult = Math.max(1, Number(qtyVal) || 1);
+                const text = ((it && (it.name||'')) + ' ' + (it && (it.extras||'')) + ' ' + (it && (it.id||''))).toString();
+                const matches = text.match(re) || [];
+                return sum + matches.length * mult;
+            }catch(e){ return sum; }
+        }, 0);
+    }
+
+    const REFRESH_MS = 10000;
+    const SCROLL_KEY = 'kara_scroll_id';
+    let refreshTimer = null;
+    let _refreshRunning = false;
+    let _refreshStopped = false;
+    let _backoffMs = 0;
+    const MAX_BACKOFF_MS = 5 * 60 * 1000;
+
+    function scheduleNextRefresh(delayMs) {
+        if (_refreshStopped) return;
+        try { if (refreshTimer) clearTimeout(refreshTimer); } catch (e) {}
+        refreshTimer = setTimeout(async () => {
+            if (_refreshStopped) return;
+            if (contextMenuEl) {
+                scheduleNextRefresh(REFRESH_MS);
+                return;
+            }
+            if (_refreshRunning) {
+                scheduleNextRefresh(REFRESH_MS);
+                return;
+            }
+            _refreshRunning = true;
+            try {
+                const ok = await load(false);
+                if (ok) {
+                    _backoffMs = 0;
+                    scheduleNextRefresh(REFRESH_MS);
+                } else {
+                    if (_backoffMs === 0) _backoffMs = REFRESH_MS;
+                    else _backoffMs = Math.min(MAX_BACKOFF_MS, Math.floor(_backoffMs * 1.8) + 1000);
+                    const jitter = Math.round((_backoffMs * 0.25) * (Math.random() - 0.5));
+                    const delay = Math.max(2000, _backoffMs + jitter);
+                    scheduleNextRefresh(delay);
+                }
+            } catch (e) {
+                console.error('Unexpected error in refresh loop', e);
+                if (_backoffMs === 0) _backoffMs = REFRESH_MS;
+                else _backoffMs = Math.min(MAX_BACKOFF_MS, Math.floor(_backoffMs * 1.8) + 1000);
+                const jitter = Math.round((_backoffMs * 0.25) * (Math.random() - 0.5));
+                const delay = Math.max(2000, _backoffMs + jitter);
+                scheduleNextRefresh(delay);
+            } finally {
+                _refreshRunning = false;
+            }
+        }, delayMs);
+    }
+
+    function startAutoRefresh(){
+        _refreshStopped = false;
+        scheduleNextRefresh(REFRESH_MS);
+    }
+
+    function stopAutoRefresh(){
+        _refreshStopped = true;
+        try{ if(refreshTimer) clearTimeout(refreshTimer); }catch(e){}
+        refreshTimer = null;
+        _refreshRunning = false;
+        _backoffMs = 0;
+    }
+
+    async function load(force=false){
+        const listEl = document.getElementById('list');
+        try{
+            const su = localStorage.getItem('kara_user');
+            const sp = localStorage.getItem('kara_pass');
+            if(!su || !sp){
+                const prompt = document.createElement('div');
+                prompt.className = 'card';
+                prompt.style.textAlign = 'center';
+                prompt.innerHTML = '<div style="font-weight:700;color:#b30000;margin-bottom:8px;">Anmeldung erforderlich</div><div>Bitte melden Sie sich an, um Bestellungen einzusehen.</div><div style="margin-top:12px"><button id="loginFromLoad" style="background:#b30000;color:#fff;border:none;padding:8px 12px;border-radius:8px;cursor:pointer;">Anmelden</button></div>';
+                listEl.replaceChildren(prompt);
+                const btn = document.getElementById('loginFromLoad');
+                if(btn) btn.onclick = function(){ showLoginOverlay(); };
+                return false;
+            }
+        }catch(e){ /* ignore storage errors and proceed to show login prompt below */ }
+        if(force){
+            if(!(Array.isArray(lastItemsCache) && lastItemsCache.length > 0)){
+                try{ renderList(JSON.parse(localStorage.getItem("List") || '[]')); }catch(e){ renderList([]); }
+                const loading = document.createElement('div');
+                loading.className = 'card';
+                loading.textContent = 'Lade...';
+                listEl.replaceChildren(loading);
+            } else {
+                const notice = document.createElement('div');
+                notice.className = 'card';
+                notice.style.border = '1px solid rgba(179,0,0,0.12)';
+                notice.style.background = '#fff7f7';
+                notice.textContent = 'Aktualisiere...';
+                notice.setAttribute('data-notice','kara-refreshing');
+                const first = listEl.firstElementChild;
+                if(first && first.getAttribute && first.getAttribute('data-notice') === 'kara-load-error'){
+                    first.remove();
+                }
+                listEl.insertBefore(notice, listEl.firstChild);
+                setTimeout(()=>{ try{ if(notice && notice.parentNode) notice.parentNode.removeChild(notice); }catch(e){} }, 900);
+            }
+        }
+        try{
+            // Include session cookie and, if present, an Authorization header built from stored credentials
+            const fetchOptions = { cache: 'no-store', credentials: 'include' };
+            try{
+                const su = localStorage.getItem('kara_user');
+                const sp = localStorage.getItem('kara_pass');
+                if(su && sp){
+                    fetchOptions.headers = { 'Authorization': 'Basic ' + btoa(su + ':' + sp) };
+                }
+            }catch(e){}
+            const res = await fetch('orders.php', fetchOptions);
+            if(!res.ok) throw { status: res.status, message: 'HTTP ' + res.status };
+            const arr = await res.json();
+            if(Array.isArray(arr)){
+                renderList(arr);
+                try{ localStorage.setItem("List", JSON.stringify(arr)); }catch(e){}
+            } else {
+                throw new Error('Unerwartete Antwort');
+            }
+            return true;
+        } catch(err){
+            console.error(err);
+            if(Array.isArray(lastItemsCache) && lastItemsCache.length > 0){
+                renderList(lastItemsCache);
+                const notice = document.createElement('div');
+                notice.className = 'card';
+                notice.style.border = '1px solid rgba(179,0,0,0.18)';
+                notice.style.background = '#fff7f7';
+                notice.textContent = 'Fehler beim Laden — letzte angezeigte Bestellungen werden weiterhin verwendet.';
+                const first = listEl.firstElementChild;
+                if(first && first.getAttribute && first.getAttribute('data-notice') === 'kara-load-error'){
+                    first.remove();
+                }
+                notice.setAttribute('data-notice', 'kara-load-error');
+                listEl.insertBefore(notice, listEl.firstChild);
+                setTimeout(()=>{ if(notice && notice.parentNode) notice.parentNode.removeChild(notice); }, 5000);
+            } else {
+                listEl.innerHTML = '<div class="card">Fehler beim Laden der Bestellungen.</div>';
+                return false;
+            }
+        }
+    }
+
+    (async function(){
+        try{
+            const storedUser = localStorage.getItem('kara_user');
+            const storedPass = localStorage.getItem('kara_pass');
+
+            if(storedUser){
+                try{ csrfToken = localStorage.getItem('kara_csrf') || null; }catch(e){}
+                setTimeout(()=>{ try{ alignTimeInput(); }catch(e){} }, 60);
+            }
+            if(storedUser && storedPass){
+                const ok = await tryAutoLogin();
+                if(ok){
+                    load(true);
+                    startAutoRefresh();
+                    setTimeout(()=>{ try{ loadTimeSetting(); alignTimeInput(); }catch(e){} }, 120);
+                } else {
+                    setAdminUI(false);
+                    try{ localStorage.removeItem('kara_csrf'); }catch(e){}
+                    load(true);
+                    startAutoRefresh();
+                }
+            } else {
+                load(true);
+                startAutoRefresh();
+            }
+            try{ await loadBlockedList(); }catch(e){}
+        }catch(e){  }
+    })();
+
+    async function loadTimeSetting(){
+        try{
+            csrfToken = csrfToken || localStorage.getItem('kara_csrf');
+            const res = await fetch('time.php', { credentials: 'include', headers: { 'X-CSRF-Token': csrfToken } });
+            const timeInput = document.getElementById('timeInput');
+            if(!timeInput) return;
+            if(res.status === 200){
+                const txt = (await res.text()).trim();
+                timeInput.value = txt || '20 Min';
+                try{ checkAndApplyForceToggle(txt); }catch(e){}
+            } else if(res.status === 401){
+                setAdminUI(false);
+                try{ localStorage.removeItem('kara_csrf'); }catch(e){}
+                timeInput.value = '20 Min';
+            } else {
+                timeInput.value = '20 Min';
+            }
+        }catch(e){
+            const timeInput = document.getElementById('timeInput');
+            if(timeInput) timeInput.value = '20 min';
+        }
+    }
+    // --- Force-0101 Toggle Logik ---
+    function getStoredPrevTime(){ return localStorage.getItem('kara_time_prev_0101') || null; }
+    function setStoredPrevTime(v){ if(v===null) localStorage.removeItem('kara_time_prev_0101'); else localStorage.setItem('kara_time_prev_0101', v); }
+    function getStoredForceFlag(){ return localStorage.getItem('kara_time_force_0101') === '1'; }
+    function setStoredForceFlag(on){ if(on) localStorage.setItem('kara_time_force_0101','1'); else localStorage.removeItem('kara_time_force_0101'); }
+    async function postTimeValue(value){
+        csrfToken = csrfToken || localStorage.getItem('kara_csrf');
+        try{
+            const res = await fetch('time.php', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': csrfToken },
+                body: 'value=' + encodeURIComponent(value)
+            });
+            return res;
+        }catch(e){ return null; }
+    }
+    async function toggleForce0101(enabled){
+        const toggle = document.getElementById('force0101Toggle');
+        const timeInput = document.getElementById('timeInput');
+        if(!toggle || !timeInput) return;
+        if(enabled){
+            const prev = (timeInput.value || '').toString();
+            setStoredPrevTime(prev);
+            if(!await ensureAdminSession()){
+                toggle.checked = false;
+                return;
+            }
+            const res = await postTimeValue('0101');
+            if(res && res.status === 201){
+                setStoredForceFlag(true);
+                timeInput.value = '0101';
+            } else {
+                console.log('Fehler beim Setzen der Zeit auf 0101.');
+                toggle.checked = false;
+                const prev = getStoredPrevTime(); if(prev!==null) timeInput.value = prev;
+            }
+        } else {
+            const prev = getStoredPrevTime() || '20 Min';
+            if(!await ensureAdminSession()){
+                toggle.checked = true;
+                return;
+            }
+            const res = await postTimeValue(prev);
+            if(res && res.status === 201){
+                setStoredForceFlag(false);
+                setStoredPrevTime(null);
+                timeInput.value = prev;
+            } else {
+                console.log('Fehler beim Wiederherstellen der vorherigen Zeit.');
+                toggle.checked = true;
+            }
+        }
+    }
+    async function checkAndApplyForceToggle(serverValue){
+        const toggle = document.getElementById('force0101Toggle');
+        if(!toggle) return;
+        const isForce = String((serverValue||'').trim()) === '0101';
+        toggle.checked = isForce;
+        if(isForce) setStoredForceFlag(true); else setStoredForceFlag(false);
+    }
+    (function(){
+        // Wire up toggle UI
+        const toggle = document.getElementById('force0101Toggle');
+        if(!toggle) return;
+        toggle.addEventListener('change', function(){
+            const on = !!toggle.checked;
+            toggleForce0101(on).catch(e => { console.error('toggleForce0101 error', e); });
+        });
+        try{
+            const stored = getStoredForceFlag();
+            if(stored){ toggle.checked = true; }
+        }catch(e){}
+    })();
+    function alignTimeInput(){
+        const h = document.querySelector('.titleWrap h1');
+        const input = document.getElementById('timeInput');
+        if(!h || !input) return;
+        if(window.getComputedStyle(input).display === 'none') return;
+        const rect = h.getBoundingClientRect();
+        const targetWidth = Math.max(64, Math.round(rect.width));
+        input.style.width = targetWidth + 'px';
+        const targetHeight = Math.round(rect.height);
+        input.style.height = targetHeight + 'px';
+        const hStyle = window.getComputedStyle(h);
+        input.style.fontSize = hStyle.fontSize;
+        input.style.lineHeight = hStyle.lineHeight;
+        input.style.paddingTop = '0.2em';
+        input.style.paddingBottom = '0.2em';
+        input.style.boxSizing = 'border-box';
+    }
+    window.addEventListener('resize', function(){ if(isAdmin) alignTimeInput(); });
+    setTimeout(()=>{ if(isAdmin) alignTimeInput(); }, 200);
+
+    function renderList(items){
+        const wasAtTopBeforeRender = (window.scrollY <= 10) || (sessionStorage.getItem('kara_scroll_top') === '1');
+        lastItemsCache = items;
+        const container = document.getElementById('list');
+        function getCenteredArticleInfo() {
+            try{
+                const articlesNow = Array.from(container.querySelectorAll('article'));
+                if(!articlesNow.length) return null;
+                const viewportCenter = window.innerHeight / 2;
+                let minDist = Infinity;
+                let chosen = articlesNow[0];
+                for(const a of articlesNow){
+                    const r = a.getBoundingClientRect();
+                    const articleCenter = (r.top + r.bottom) / 2;
+                    const dist = Math.abs(articleCenter - viewportCenter);
+                    if(dist < minDist){ minDist = dist; chosen = a; }
+                }
+                const id = chosen.getAttribute('data-id') || chosen.getAttribute('data-ids') || null;
+                const offset = chosen.getBoundingClientRect().top;
+                return id ? { id: String(id), offset: Number(offset) } : null;
+            }catch(e){ return null; }
+        }
+
+        const prevVisible = getCenteredArticleInfo();
+        if(!Array.isArray(items) || items.length === 0){
+            container.innerHTML = '<div class="empty">Keine Bestellungen aktuell.</div>';
+            lastIds = new Set();
+            sessionStorage.removeItem(SCROLL_KEY);
+            return;
+        }
+        const ordered = items.slice().reverse();
+        const groups = new Map();
+        ordered.forEach((it, idx) => {
+            const rawId = it.id || (it.timestamp+ '|' + (it.ip||'') + '|' + (it.name||'') + '|' + (it.menge||''));
+            const key = rawId;
+            if(!groups.has(key)) groups.set(key, {key, members: []});
+            groups.get(key).members.push({it, idx});
+        });
+        const Flcount = countWordInItems(items, /\bFladenbrot\b/giu);
+        const YFcount = countWordInItems(items, /\bYufka\b/giu);
+        const Pcount = countWordInItems(items, /\bPizza\b/giu);
+        const getti = document.getElementById('getti');
+        if(getti){
+            getti.textContent = `${Flcount}xFladen  ${YFcount}xYufka  ${Pcount}xPizza`;
+        }
+        const newIds = new Set(ordered.map(it => it.id || (it.timestamp+'|'+it.ip+'|'+it.name+'|'+it.menge)));
+        const html = Array.from(groups.values()).map(group => {
+            const idsArray = group.members.map(m => m.it.id || (m.it.timestamp+'|'+m.it.ip+'|'+m.it.name+'|'+m.it.menge));
+            const uniqueIds = Array.from(new Set(idsArray));
+            const idsDisplay = uniqueIds[0] || '';
+            const dataId = uniqueIds[0] || '';
+            const totalMenge = group.members.reduce((s,m)=> s + (Number(m.it.menge)||0), 0);
+            const nameLines = group.members.map(m => escapeHtml(m.it.name) + ' x' + escapeHtml(m.it.menge)).join('<br>');
+            const first = group.members[0].it;
+            const time = first.timestamp ? new Date(first.timestamp).toLocaleString('de-DE') : '';
+            const groupStatus = first && first.status ? 'status-' + first.status : 'status-unset';
+            const groupBlocked = group.members.some(m => !!m.it.blocked);
+            const groupBlockedClass = groupBlocked ? ' blocked' : '';
+            return `<article class="card group-card ${escapeHtml(groupStatus)}${groupBlockedClass}" data-ids="${escapeHtml(idsDisplay)}" data-id="${escapeHtml(dataId)}" data-group-key="${escapeHtml(group.key)}">
+          <div class="row">
+            <div>
+              <div class="big">${escapeHtml(idsDisplay)}</div>
+            </div>
+            <div style="text-align:right">
+              <div class="count">${escapeHtml(idsDisplay)}</div>
+              <div class="small"><b style='color:#b30000'>Gesamt: ${escapeHtml(String(totalMenge))}</b><br>${escapeHtml(time)}</div>
+               ${isAdmin ? `<div style="margin-top:8px;display:flex;gap:6px;justify-content:flex-end">
+                 <button class="group-action" data-action="done" style="background:#ffe066;color:#000;border:none;border-radius:6px;padding:6px 8px;font-weight:700;cursor:pointer">Fertig</button>
+                 <button class="group-action" data-action="pickedup" style="background:#b6fcb6;color:#000;border:none;border-radius:6px;padding:6px 8px;font-weight:700;cursor:pointer">Abgeholt</button>
+                 <button class="group-action" data-action="" style="background:#fff;color:#b30000;border:1px solid #b30000;border-radius:6px;padding:6px 8px;font-weight:700;cursor:pointer">Unfertig</button>
+                ${ first && first.ip ? (groupBlocked ? `<button class="unblockBtn" data-ip="${escapeHtml(first.ip)}" style="background:#b30000;color:#fff;border:none;border-radius:6px;padding:6px 8px;font-weight:900;cursor:pointer">Endblock</button>` : `<button class="blockBtn" data-ip="${escapeHtml(first.ip)}" style="background:#b30000;color:#fff;border:none;border-radius:6px;padding:6px 8px;font-weight:900;cursor:pointer">Block</button>`) : '' }
+                 <button class="group-delete" title="X" style="background:#b30000;color:#fff;border:none;border-radius:6px;padding:6px 8px;font-weight:900;cursor:pointer">✕ Gruppe</button>
+               </div>` : ''}
+             </div>
+           </div>
+          <div style="margin-top:10px;padding-top:10px;border-top:1px dashed rgba(179,0,0,0.06);">
+          ${group.members.map(m => {
+                const sc = m.it && m.it.status ? 'status-' + m.it.status : 'status-unset';
+                const blockedClass = m.it && m.it.blocked ? ' blocked' : '';
+                const ipAttr = escapeHtml(m.it.ip || '');
+                const timestampText = (new Date(m.it.timestamp||'').toLocaleString ? new Date(m.it.timestamp||'').toLocaleString('de-DE') : '');
+                const adminButtons = isAdmin ? (isAdmin ? `<button class="delBtn member-delBtn" title="Eintrag löschen" style="background:#b30000;color:#fff;border:none;border-radius:6px;padding:4px 8px;font-weight:900;cursor:pointer;margin-top:6px;">✕</button>` : '') : '';
+                return `
+                <div class="member-item ${sc}${blockedClass}" data-idx="${m.idx}" style="padding:8px 6px;border-radius:8px;margin-bottom:6px;background:#fff;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                  <div style="min-width:0">
+                    <div style="font-weight:700;color:var(--red);">${escapeHtml(m.it.name)} <span style="font-weight:600;color:#6a0000">x ${escapeHtml(m.it.menge)}</span></div>
+                    <div class="small" style="margin-top:4px">${escapeHtml(m.it.extras||'')}</div>
+                  </div>
+                  <div style="text-align:right;min-width:110px">
+                    <div style="font-size:0.85rem;color:#6a0000">${escapeHtml(timestampText)}</div>
+                    ${adminButtons}
+                  </div>
+                </div>`;
+            }).join('')}
+         </div>
+       </article>`;
+        }).join('');
+
+        try{
+            const temp = document.createElement('div');
+            temp.innerHTML = html;
+            const newChildren = Array.from(temp.children).filter(n => n.tagName && n.tagName.toLowerCase() === 'article');
+            const frag = document.createDocumentFragment();
+            newChildren.forEach(newChild => {
+                const nid = newChild.getAttribute('data-id') || newChild.getAttribute('data-ids') || '';
+                let existing = null;
+                if(nid){
+                    existing = container.querySelector(`[data-id="${CSS.escape(nid)}"]`) || container.querySelector(`[data-ids*="${CSS.escape(nid)}"]`);
+                }
+                if(existing){
+                    if(existing.innerHTML !== newChild.innerHTML){
+                        existing.innerHTML = newChild.innerHTML;
+                    }
+                    frag.appendChild(existing);
+                } else {
+                    frag.appendChild(newChild);
+                }
+            });
+            container.replaceChildren(frag);
+
+            // Direkt-Handler für Gruppen-Block/Unblock-Buttons anhängen
+            // (stoppt Event-Propagation und ruft adminBlockIp/adminUnblockIp auf,
+            // damit Delegation an .delBtn nicht versehentlich ausgelöst wird)
+            try{
+                Array.from(container.querySelectorAll('.blockBtn')).forEach(btn => {
+                    // style angle: make it look like the delete button (same visual)
+                    btn.style.background = '#b30000'; btn.style.color = '#fff'; btn.style.border = 'none'; btn.style.borderRadius = '6px'; btn.style.padding = '6px 8px'; btn.style.fontWeight = '900'; btn.style.cursor = 'pointer';
+                    btn.addEventListener('click', async function(ev){
+                        ev.stopPropagation(); ev.preventDefault();
+                        if(!isAdmin){ showLoginOverlay(); return; }
+                        const ip = btn.getAttribute('data-ip');
+                        if(ip && confirm('IP blocken: ' + ip + '?')){
+                            await adminBlockIp(ip);
+                        }
+                    });
+                });
+                Array.from(container.querySelectorAll('.unblockBtn')).forEach(btn => {
+                    // same visual as delete-button
+                    btn.style.background = '#b30000'; btn.style.color = '#fff'; btn.style.border = 'none'; btn.style.borderRadius = '6px'; btn.style.padding = '6px 8px'; btn.style.fontWeight = '900'; btn.style.cursor = 'pointer';
+                    btn.addEventListener('click', async function(ev){
+                        ev.stopPropagation(); ev.preventDefault();
+                        if(!isAdmin){ showLoginOverlay(); return; }
+                        const ip = btn.getAttribute('data-ip');
+                        if(ip && confirm('Block aufheben für IP: ' + ip + '?')){
+                            await adminUnblockIp(ip);
+                        }
+                    });
+                });
+            }catch(e){ /* ignore */ }
+        }catch(e){
+            container.innerHTML = html;
+        }
+        try{
+            if(!wasAtTopBeforeRender && prevVisible && prevVisible.id){
+                const newEl = container.querySelector(`[data-id="${CSS.escape(prevVisible.id)}"]`) || container.querySelector(`[data-ids*="${CSS.escape(prevVisible.id)}"]`);
+                if(newEl){
+                    const desired = Math.round(window.scrollY + newEl.getBoundingClientRect().top - prevVisible.offset);
+                    let tries = 0;
+                    const maxTries = 20;
+                    const doScroll = () => {
+                        try{ window.scrollTo({ top: desired, behavior: 'auto' }); }catch(e){ window.scrollTo(0, desired); }
+                        tries++;
+                        if(Math.abs(window.scrollY - desired) > 2 && tries < maxTries){
+                            requestAnimationFrame(doScroll);
+                        } else {
+                            try{ sessionStorage.removeItem('kara_scroll_pos'); sessionStorage.removeItem('kara_scroll_offset'); }catch(e){}
+                        }
+                    };
+                    requestAnimationFrame(doScroll);
+                    setTimeout(()=>{ try{ window.scrollTo({ top: Math.round(window.scrollY + newEl.getBoundingClientRect().top - prevVisible.offset), behavior: 'auto' }); }catch(e){} }, 300);
+                }
+            }
+        }catch(e){  }
+
+        container.onclick = async function(e){
+            console.debug('container click', e.target && e.target.className, e.target && e.target.tagName);
+            const ga = e.target.closest('.group-action');
+            if(ga && container.contains(ga)){
+                if(!isAdmin){ showLoginOverlay(); return; }
+                const art = ga.closest('article.group-card');
+                if(!art) return;
+                const members = Array.from(art.querySelectorAll('.member-item')).map(mi => {
+                    const idx = parseInt(mi.getAttribute('data-idx'));
+                    return {it: ordered[idx], idx};
+                });
+                const action = ga.getAttribute('data-action');
+                console.debug('group-action click', action, members.map(m=>m.it.id || m.it.timestamp));
+                await adminUpdateOrdersBatch(members, action);
+                return;
+            }
+            const gd = e.target.closest('.group-delete');
+            if(gd && container.contains(gd)){
+                if(!isAdmin){ showLoginOverlay(); return; }
+                if(!confirm('Wirklich die ganze Gruppe löschen?')) return;
+                const art = gd.closest('article.group-card');
+                if(!art) return;
+                const members = Array.from(art.querySelectorAll('.member-item')).map(mi => {
+                    const idx = parseInt(mi.getAttribute('data-idx'));
+                    return {it: ordered[idx], idx};
+                });
+                console.debug('group-delete click', members.map(m=>m.it.id || m.it.timestamp));
+                await adminDeleteOrdersBatch(members);
+                return;
+            }
+            const btn = e.target.closest('.delBtn');
+            if(btn && container.contains(btn)){
+                e.stopPropagation();
+                console.debug('member-delBtn click');
+                if(!isAdmin){ showLoginOverlay(); return; }
+                const mi = btn.closest('.member-item');
+                if(!mi) return;
+                if(!confirm('Wirklich löschen?')) return;
+                const idx = parseInt(mi.getAttribute('data-idx'));
+                const it = ordered[idx];
+                console.debug('delete single item', it.id || it.timestamp);
+                await adminDeleteOrder(it);
+            }
+            const bBtn = e.target.closest('.blockBtn');
+            if(bBtn && container.contains(bBtn)){
+                e.stopPropagation();
+                if(!isAdmin){ showLoginOverlay(); return; }
+                const ip = bBtn.getAttribute('data-ip');
+                if(ip && confirm('IP blocken: ' + ip + '?')){
+                    await adminBlockIp(ip);
+                }
+                return;
+            }
+            const ubBtn = e.target.closest('.unblockBtn');
+            if(ubBtn && container.contains(ubBtn)){
+                e.stopPropagation();
+                if(!isAdmin){ showLoginOverlay(); return; }
+                const ip = ubBtn.getAttribute('data-ip');
+                if(ip && confirm('Block aufheben für IP: ' + ip + '?')){
+                    await adminUnblockIp(ip);
+                }
+                return;
+            }
+        };
+
+        if(isAdmin){
+            container.querySelectorAll('.member-item').forEach(card => {
+                card.addEventListener('contextmenu', function(e){
+                    e.preventDefault();
+                    const idx = parseInt(card.getAttribute('data-idx'));
+                    const it = ordered[idx];
+                    const actions = [
+                        {label:'Als fertig markieren', color:'#ffe066', action:()=>adminUpdateOrder(it,'done')},
+                        {label:'Abgeholt', color:'#b6fcb6', action:()=>adminUpdateOrder(it,'pickedup')}
+                    ];
+                    if(it.status && it.status !== '') {
+                        actions.push({label:'Als unfertig markieren', color:'#fff', action:()=>adminUpdateOrder(it,'')});
+                    }
+                    showContextMenu(e.clientX, e.clientY, actions);
+                });
+
+                (function(card){
+                    let holdTimer = null;
+                    let longPressFired = false;
+                    let startX = 0, startY = 0;
+                    const MOVE_THRESHOLD = 10;
+                    let moveHandler = null;
+                    let moveEventName = null;
+                    function buildActionsForCard(){
+                        const idx = parseInt(card.getAttribute('data-idx'));
+                        const it = ordered[idx];
+                        const actions = [
+                            {label:'Als fertig markieren', color:'#ffe066', action:()=>adminUpdateOrder(it,'done')},
+                            {label:'Abgeholt', color:'#b6fcb6', action:()=>adminUpdateOrder(it,'pickedup')}
+                        ];
+                        if(it.status && it.status !== '') {
+                            actions.push({label:'Als unfertig markieren', color:'#fff', action:()=>adminUpdateOrder(it,'')});
+                        }
+                        return actions;
+                    }
+                    function startHold(ev){
+                        const p = (ev.touches && ev.touches[0]) || ev;
+                        const clientX = p.clientX || 0;
+                        const clientY = p.clientY || 0;
+                        longPressFired = false;
+                        startX = clientX; startY = clientY;
+                        card.classList.add('holding');
+                        if(holdTimer) clearTimeout(holdTimer);
+                        moveHandler = function(moveEv){
+                            const q = (moveEv.touches && moveEv.touches[0]) || moveEv;
+                            const dx = Math.abs((q.clientX||0) - startX);
+                            const dy = Math.abs((q.clientY||0) - startY);
+                            if(Math.max(dx,dy) > MOVE_THRESHOLD){ cancelHold(); }
+                        };
+                        if(window.PointerEvent){
+                            moveEventName = 'pointermove';
+                        } else if('ontouchmove' in window){
+                            moveEventName = 'touchmove';
+                        } else {
+                            moveEventName = 'mousemove';
+                        }
+                        card.addEventListener(moveEventName, moveHandler, {passive:true});
+                        holdTimer = setTimeout(()=>{
+                            longPressFired = true;
+                            const actions = buildActionsForCard();
+                            showContextMenu(clientX, clientY, actions);
+                            card.classList.remove('holding');
+                        }, 3000);
+                    }
+                    function cancelHold(){
+                        if(holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+                        card.classList.remove('holding');
+                        if(moveHandler && moveEventName) { card.removeEventListener(moveEventName, moveHandler); moveHandler = null; moveEventName = null; }
+                    }
+                    if(window.PointerEvent){
+                        card.addEventListener('pointerdown', startHold);
+                        ['pointerup','pointercancel','pointerleave'].forEach(ev => card.addEventListener(ev, cancelHold));
+                    } else {
+                        card.addEventListener('touchstart', startHold, {passive:true});
+                        card.addEventListener('touchend', cancelHold);
+                        card.addEventListener('touchcancel', cancelHold);
+                        card.addEventListener('mousedown', startHold);
+                        ['mouseup','mouseleave'].forEach(ev => card.addEventListener(ev, cancelHold));
+                    }
+                    card.addEventListener('contextmenu', function(e){
+                        if(longPressFired){
+                            e.preventDefault();
+                            longPressFired = false;
+                        }
+                    });
+                })(card);
+            });
+        }
+
+        const newlyAdded = [...newIds].filter(x => !lastIds.has(x));
+        try{
+            const actualNew = [];
+            if(!seenInitialized){
+                newlyAdded.forEach(id => seenIds.add(id));
+                persistSeenIds();
+                seenInitialized = true;
+            } else {
+                newlyAdded.forEach(id => {
+                    if(!seenIds.has(id)){
+                        actualNew.push(id);
+                        seenIds.add(id);
+                    }
+                });
+                if(actualNew.length > 0){
+                    playToneRepeated(actualNew.length);
+                    try{
+                        const actualSet = new Set(actualNew);
+                        const sampleNames = [];
+                        for(const it of ordered){
+                            const rid = it.id || (it.timestamp+'|'+it.ip+'|'+it.name+'|'+it.menge);
+                            if(actualSet.has(rid)){
+                                sampleNames.push(it.name || String(it.id || ''));
+                            }
+                            if(sampleNames.length >= 5) break;
+                        }
+                        try{ showOrdersNotification(actualNew.length, sampleNames); }catch(e){}
+                    }catch(e){}
+                    persistSeenIds();
+                }
+            }
+        }catch(e){  }
+
+        if(newlyAdded.length){
+            newlyAdded.forEach(id => {
+                const el = container.querySelector(`[data-ids*="${CSS.escape(id)}"]`);
+                if(el){
+                    el.classList.add('highlight');
+                    setTimeout(()=> el.classList.remove('highlight'), 1500);
+                }
+            });
+        }
+        lastIds = newIds;
+        if(!wasAtTopBeforeRender) {
+            restoreScrollPosition(container);
+
+        }
+        if(wasAtTopBeforeRender){
+            (function tryScrollTop(){
+                let tries = 0;
+                const maxTries = 30;
+                const doScroll = () => {
+                    try{ window.scrollTo({ top: 0, behavior: 'auto' }); }catch(e){ try{ window.scrollTo(0,0); }catch(_){} }
+                    tries++;
+                    if(window.scrollY > 2 && tries < maxTries){
+                        requestAnimationFrame(doScroll);
+                    } else {
+                        setTimeout(()=>{ try{ window.scrollTo({ top: 0, behavior: 'auto' }); }catch(e){ try{ window.scrollTo(0,0); }catch(_){} } }, 120);
+                    }
+                };
+                setTimeout(() => {
+                    requestAnimationFrame(doScroll);
+                }, 500);
+                console.log('tryScrollTop invoked');
+            })();
+        }
+        checkandscroll()
+    }
+    let blockedListCache = [];
+    async function loadBlockedList(){
+        try{
+            const fetchOptions = { cache: 'no-store', credentials: 'include' };
+            try{
+                const su = localStorage.getItem('kara_user');
+                const sp = localStorage.getItem('kara_pass');
+                if(su && sp) fetchOptions.headers = { 'Authorization': 'Basic ' + btoa(su + ':' + sp) };
+            }catch(e){}
+            const res = await fetch('blockUser.php', fetchOptions);
+            if(!res.ok) throw new Error('HTTP ' + res.status);
+            const data = await res.json();
+            if(data && data.status === 'success' && Array.isArray(data.blocked)){
+                blockedListCache = data.blocked;
+            } else {
+                blockedListCache = [];
+            }
+        }catch(e){ blockedListCache = []; }
+    }
+    function renderBlockedList(){
+        const cont = document.getElementById('blockedListContainer');
+        if(!cont) return;
+        if(!Array.isArray(blockedListCache) || blockedListCache.length === 0){
+            cont.innerHTML = '<div class="empty">Keine geblockten IPs.</div>';
+            return;
+        }
+        const rows = blockedListCache.map(b => {
+            const ip = escapeHtml(b.ip || '');
+            const by = escapeHtml(b.blocked_by || '');
+            const time = escapeHtml(b.timestamp || '');
+            const reason = escapeHtml(b.reason || '');
+            return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;border-bottom:1px solid #eee">
+                <div style="min-width:0">
+                    <div style="font-weight:800;color:#b30000">${ip}</div>
+                    <div class="small">Geblockt: ${time} · von: ${by}${reason ? ' · Grund: ' + reason : ''}</div>
+                </div>
+                <div><button class="unblockBtn" data-ip="${ip}">Endblock</button></div>
+            </div>`;
+        }).join('');
+        cont.innerHTML = rows;
+        // attach handlers
+        Array.from(cont.querySelectorAll('.unblockBtn')).forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const ip = btn.getAttribute('data-ip');
+                if(!ip) return;
+                if(!confirm('Block aufheben für IP: ' + ip + '?')) return;
+                await adminUnblockIp(ip);
+            });
+        });
+    }
+    function showBlockedModal(){
+        const modal = document.getElementById('blockedModal');
+        if(!modal) return;
+        renderBlockedList();
+        modal.style.display = 'flex';
+    }
+    window.addEventListener("scroll", () => {
+        isAtTop = window.scrollY === 0;
+    });
+</script>
+<footer style="margin:18px auto 40px;max-width:1100px;text-align:center;color:#6a0000;font-size:0.9rem;padding:6px 12px;">
+    <a href="impressum.html" style="color:inherit;text-decoration:none;margin:0 6px;">Impressum</a> ·
+    <a href="datenschutzerklaerung.html" style="color:inherit;text-decoration:none;margin:0 6px;">Datenschutzerklärung</a>
+    <div style="margin-top:6px;color:#8b0000;">© Karadeniz 55</div>
+</footer>
+</body>
+</html>

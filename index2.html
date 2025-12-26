@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8" />
+    <title>Karadeniz 55 — Bestellen</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+        :root{--red:#b30000;--white:#fff;--bg:#fff5f5;--card:#fff0f0;--muted:#4c0a0a;--radius:10px}
+        *{box-sizing:border-box}
+        body{font-family:Inter,system-ui,Arial,sans-serif;background:var(--bg);color:var(--muted);margin:16px;-webkit-font-smoothing:antialiased}
+        .wrap{max-width:1100px;margin:0 auto}
+        header{display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+        h1{color:var(--red);margin:0;font-size:1.4rem}
+        .grid{display:grid;grid-template-columns:1fr 380px;gap:18px}
+        @media (max-width:920px){.grid{grid-template-columns:1fr}}
+        .card{background:var(--white);border-radius:12px;padding:12px;border:1px solid rgba(179,0,0,0.06)}
+        .menu-list details{border:1px solid rgba(0,0,0,0.04);background:#fff7f7;border-radius:8px;margin-bottom:8px;padding:6px;overflow:hidden}
+        .menu-list summary{cursor:pointer;padding:8px;font-weight:800;color:var(--red);list-style:none;outline:none;display:flex;align-items:center;justify-content:space-between}
+        .menu-list summary::after{content:'▾';display:inline-block;margin-left:8px;transition:transform 220ms ease;color:#8b0000}
+        details[open] > summary::after{transform:rotate(180deg)}
+        .dish{display:flex;justify-content:space-between;align-items:center;padding:8px;border-radius:8px;margin-top:6px;background:transparent;opacity:0;transform:translateY(6px);transition:opacity 280ms cubic-bezier(.2,.9,.2,1), transform 280ms cubic-bezier(.2,.9,.2,1)}
+        .dish.visible{opacity:1;transform:translateY(0)}
+        .dish .left{display:flex;flex-direction:column}
+        .btn{background:var(--red);color:var(--white);border:0;padding:6px 10px;border-radius:8px;cursor:pointer;font-weight:700;transition:transform 160ms ease, filter 160ms ease}
+        .btn:hover{transform:translateY(-2px);filter:brightness(1.03)}
+        .btn.pressed{ transform: scale(0.92); box-shadow: 0 6px 14px rgba(0,0,0,0.12) inset, 0 6px 18px rgba(0,0,0,0.06); filter:brightness(0.92); }
+        .order-list{display:flex;flex-direction:column;gap:10px}
+        .item{display:flex;flex-direction:column;padding:8px;border-radius:8px;background:var(--card);border:1px solid rgba(179,0,0,0.06);transform-origin:center right;transition:transform 320ms cubic-bezier(.2,.9,.2,1), box-shadow 320ms}
+        .item.enter{transform:translateX(6px);box-shadow:0 8px 24px rgba(179,0,0,0.06)}
+        .item-top{display:flex;justify-content:space-between;align-items:center}
+        .controls{display:flex;gap:6px;align-items:center}
+        .qty-btn{background:#6a0000;color:#fff;border:0;padding:4px 8px;border-radius:6px;cursor:pointer}
+        .remove-btn{background:transparent;border:0;color:var(--red);font-weight:800;cursor:pointer}
+        .extras-input{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.08);margin-top:8px}
+        .total{font-weight:900;color:var(--red);font-size:1.1rem;text-align:right;margin-top:8px}
+        .checkout{display:block;width:100%;padding:12px;background:var(--red);color:var(--white);border:0;border-radius:10px;font-weight:800;cursor:pointer;margin-top:8px;position:relative;overflow:hidden}
+        .checkout:hover{transform:translateY(-2px)}
+        .checkout.loading{pointer-events:none;opacity:0.95}
+        .checkout.loading::after{content:'';position:absolute;right:14px;top:50%;transform:translateY(-50%);width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,0.35);border-top-color:#fff;animation:spin 820ms linear infinite}
+        @keyframes spin{to{transform:translateY(-50%) rotate(360deg)}}
+        .empty{padding:18px;text-align:center;border:1px dashed rgba(179,0,0,0.12);border-radius:8px;background:transparent;color:#8b0000}
+        .small{font-size:0.9rem;color:#6a0000}
+        .status{margin-top:8px;text-align:center;color:#6a0000;font-weight:600}
+        .item.added { animation: popPulse 760ms cubic-bezier(.2,.9,.2,1); box-shadow: 0 12px 30px rgba(179,0,0,0.16); transform: scale(1.02); background: linear-gradient(90deg, rgba(255,244,244,0.95), rgba(255,250,250,0.98)); }
+        .kara-toast{position:fixed;left:50%;transform:translateX(-50%) translateY(18px);bottom:22px;background:#6a0000;color:#fff;padding:10px 14px;border-radius:999px;font-weight:800;box-shadow:0 8px 24px rgba(0,0,0,0.12);opacity:0;pointer-events:none;transition:transform 260ms cubic-bezier(.2,.9,.2,1),opacity 260ms}
+        .kara-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <header><h1 id="head">Karadeniz 55 — Bestellen</h1></header>
+    <div id="orderMeta" style="text-align:center;margin-top:6px;color:#6a0000;font-size:0.95rem;"></div>
+    <div id="karaToast" class="kara-toast" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true"></div>
+
+    <div class="grid">
+        <section class="card">
+            <h2 style="margin:0 0 8px 0;color:var(--red);font-weight:800">Speisekarte</h2>
+            <div class="menu-list" id="menuList" role="list"></div>
+        </section>
+
+        <aside class="card">
+            <h3 style="margin:0 0 8px 0;color:var(--red)">Deine Bestellung</h3>
+            <div id="orderWrapper" class="order-list" aria-live="polite"></div>
+            <div id="emptyMsg" class="empty">Deine Bestellliste ist leer.</div>
+            <div class="total" id="totalPrice">Gesamt: 0,00 €</div>
+            <div class="status" id="cooldownMsg"></div>
+            <label style="display:block;margin-top:8px;font-weight:700;color:var(--red)">Telefonnummer (zwingend)
+                <input id="phoneInput" type="tel" placeholder="z.B. +491771234567" style="width:100%;margin-top:6px;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.08)">
+            </label>
+            <div id="phoneMsg" class="small" style="color:#b30000;margin-top:6px"></div>
+            <p>Wenn Sie Ihre Bestellung nicht abholen, wird Ihr Gerät gesperrt, sodass Sie keine weiteren Bestellungen machen können.</p>
+            <button id="checkoutBtn" class="checkout" onclick="checkout()">✅ Bestellung abschließen</button>
+        </aside>
+    </div>
+</div>
+
+<script>
+    let bestellId = null;
+    const COOLDOWN_SECONDS = 60;
+    const LAST_ORDER_KEY = 'kara_last_order_ts';
+    const PHONE_KEY = 'kara_phone';
+    const menuData = [
+        {category:'Falafel', items:[
+                {id:'fladen_weichkaese',name:'Fladenbrot Vegetarisch mit Weichkäse',price:7.0},
+                {id:'yufka_vegetarisch',name:'Yufka Vegetarisch',price:8.0},
+                {id:'falafel_fladen',name:'Falafel im Fladenbrot',price:7.5},
+                {id:'falafel_yufka',name:'Falafel Yufka',price:8.5},
+                {id:'falafel_teller_salat',name:'Falafel auf Teller mit Salat',price:10.5},
+                {id:'falafel_teller_pommes',name:'Falafel auf Teller mit Pommes & Salat',price:11.5}
+            ]},
+        {category:'Hackfleisch', items:[
+                {id:'hack_fladen',name:'Im Fladenbrot',price:7.5},
+                {id:'hack_yufka',name:'Yufka (Dürüm)',price:8.5},
+                {id:'hack_teller_salat',name:'auf Teller mit Salat',price:11.0},
+                {id:'hack_teller_full',name:'auf Teller mit Hackspieß, Pommes und Salat',price:12.0},
+                {id:'box_hackspieß',name:'Im Box nur Hackspieß',price:10.5},
+                {id:'box_hack',name:'Im Box mit Hackspieß, Salat und Pommes',price:9.5},
+                {id:'box_hack_pommes',name:'Im Box mit Hackspieß, Pommes oder Salat',price:7.5},
+                {id:'box_falafel',name:'Im Box mit Falafeln, Pommes oder Salat',price:7.5}
+            ]},
+        {category:'Halloumi', items:[
+                {id:'halloumi_brot',name:'Halloumi im Brot',price:7.5},
+                {id:'halloumi_yufka',name:'Halloumi im Yufka',price:8.5},
+                {id:'halloumi_fladen',name:'Halloumi im Fladenbrot',price:9.5},
+                {id:'halloumi_yufka_hack',name:'Halloumi Yufka mit Hackspiess',price:10.5},
+                {id:'halloumi_teller_pommes',name:'Halloumi Teller mit Pommes und Salat',price:11.5},
+                {id:'halloumi_teller_hack',name:'Halloumi Teller mit Hackspieß und Salat',price:11.5},
+                {id:'halloumi_teller_full',name:'Halloumi Teller mit Hackspieß, Pommes und Salat',price:12.5}
+            ]},
+        {category:'Pizzen', items:[
+                {id:'pizza_brot',name:'Pizza Brot',price:7.5},
+                {id:'margherita',name:'Margherita (Pizza)',price:9.0},
+                {id:'mozzarella',name:'Mozzarella (Pizza)',price:10.0},
+                {id:'funghi',name:'Funghi (Pizza)',price:9.5},
+                {id:'rindersalami',name:'Rindersalami oder Putenschinken (Pizza)',price:9.5},
+                {id:'sucuk',name:'Sucuk (Pizza)',price:10.5},
+                {id:'hackspieß_pizza',name:'Hackspieß (Pizza)',price:10.5},
+                {id:'artischocken',name:'Artischocken (Pizza)',price:9.5},
+                {id:'gorgonzola',name:'Grogonzola (Pizza)',price:9.5},
+                {id:'tonno',name:'Tonno (Pizza)',price:10.5},
+                {id:'sardellen',name:'Sardellen (Pizza)',price:10.5},
+                {id:'meeresfruechte',name:'Meeresfrüchte (Pizza)',price:10.5},
+                {id:'hawaii',name:'Hawaii (Pizza)',price:10.0},
+                {id:'atlanta',name:'Atlanta (Pizza)',price:10.0},
+                {id:'italien',name:'Italien (Pizza)',price:10.5},
+                {id:'romana',name:'Romana (Pizza)',price:11.5},
+                {id:'kalifornien',name:'Kalifornien (Pizza)',price:11.5},
+                {id:'vier_jahreszeiten',name:'4 Jahreszeiten (Pizza)',price:11.5},
+                {id:'vier_kaese',name:'4 Käsesorten (Pizza)',price:12.0},
+                {id:'gemischt',name:'Gemischt (Pizza)',price:13.0},
+                {id:'vegetarisch',name:'Vegetarisch (Pizza)',price:12.0},
+                {id:'napoletane',name:'Napoletane (Pizza)',price:11.5},
+                {id:'mezzo_mezzo',name:'Mezzo-Mezzo (Pizza)',price:11.5},
+                {id:'mexiko',name:'Mexiko (Pizza)',price:12.5}
+            ]},
+        {category:'Lahmacun', items:[
+                {id:'lahmacun_plain',name:'Lahmacun (ohne Salat)',price:6.5},
+                {id:'lahmacun_salat',name:'Lahmacun mit Salat',price:8.0},
+                {id:'lahmacun_spezial',name:'Lahmacun Spezial mit Hackspieß',price:9.5},
+                {id:'lahmacun_teller',name:'Lahmacun Teller mit Fleisch und Salat',price:11.5}
+            ]},
+        {category:'Pide', items:[
+                {id:'pide_edamer',name:'Pide mit Edamer und Weichkäse',price:9.5},
+                {id:'pide_hack',name:'Pide mit Hackfleisch',price:10.0},
+                {id:'pide_hackspieß',name:'Pide mit Hackspieß',price:10.5},
+                {id:'pide_sucuk',name:'Pide mit Sucuk',price:10.5},
+                {id:'pide_salami',name:'Pide mit Rindersalami oder Putenschinken',price:10.0},
+                {id:'pide_spinat',name:'Pide mit Weichkäse und Spinat',price:10.5}
+            ]},
+        {category:'Pommes', items:[
+                {id:'pommes_normal',name:'Pommes (normal)',price:4.0},
+                {id:'pommes_xxl',name:'Pommes (extra-gross XXL)',price:7.0},
+                {id:'jede_zutat',name:'Jede weitere Zutat',price:1.0},
+                {id:'fladenbrot',name:'Fladenbrot',price:1.5},
+                {id:'extra_soße',name:'Extra Soße',price:1.0},
+                {id:'portion_peperoni',name:'Portion Peperoni',price:1.0}
+            ]},
+        {category:'Salate', items:[
+                {id:'gemischter_salat',name:'Gemischter Salat',price:6.5},
+                {id:'bauernsalat',name:'Bauernsalat',price:7.5},
+                {id:'thunfischsalat',name:'Thunfischsalat',price:7.5},
+                {id:'mozzarella_salat',name:'Mozzarella Salat',price:7.5}
+            ]},
+        {category:'Seele', items:[
+                {id:'seele_hackspieß',name:'Seele mit Hackspieß',price:10.5},
+                {id:'seele_schinken',name:'Seele mit Putenschinken oder Rindersalami',price:10.0},
+                {id:'seele_kaese',name:'Seele mit Käse',price:9.0},
+                {id:'seele_hawaii',name:'Seele Hawaii (Putenschinken und Ananas)',price:10.5},
+                {id:'seele_gemischt',name:'Seele Gemischt',price:11.5},
+                {id:'seele_vegetarisch',name:'Seele Vegetarisch',price:11.5}
+            ]}
+    ];
+    let order = [];
+    let onlineChecked = false;
+    let onlineDisabled = false;
+    function showOfflineUI(){
+        try{
+            let ov = document.getElementById('offlineOverlay');
+            if(!ov){
+                ov = document.createElement('div');
+                ov.id = 'offlineOverlay';
+                ov.setAttribute('role','alert');
+                ov.style.position = 'fixed';
+                ov.style.inset = '0';
+                ov.style.background = 'rgba(0,0,0,0.45)';
+                ov.style.zIndex = '9999';
+                ov.style.display = 'flex';
+                ov.style.alignItems = 'center';
+                ov.style.justifyContent = 'center';
+                ov.innerHTML = `<div style="background:#fff;padding:22px;border-radius:12px;max-width:760px;width:calc(100% - 40px);text-align:center;color:#6a0000;font-weight:800;border:4px solid #ffe066;">Aufgrund der hohen Nachfrage ist die Online-Bestellung temporär nicht verfügbar.</div>`;
+                document.body.appendChild(ov);
+            } else {
+                ov.style.display = 'flex';
+            }
+            try{ document.getElementById('checkoutBtn').disabled = true; }catch(e){}
+            Array.from(document.querySelectorAll('button.btn, button.qty-btn, button.remove-btn, input.extras-input, input#phoneInput')).forEach(el=>{ try{ el.disabled = true; el.style.opacity = '0.6'; }catch(e){} });
+            const cm = document.getElementById('cooldownMsg'); if(cm) cm.textContent = 'Online-Bestellsystem deaktiviert.';
+        }catch(e){ console.warn('showOfflineUI error', e); }
+    }
+    function hideOfflineUI(){
+        try{
+            const ov = document.getElementById('offlineOverlay'); if(ov) ov.style.display = 'none';
+            try{ document.getElementById('checkoutBtn').disabled = false; }catch(e){}
+            Array.from(document.querySelectorAll('button.btn, button.qty-btn, button.remove-btn, input.extras-input, input#phoneInput')).forEach(el=>{ try{ el.disabled = false; el.style.opacity = '1'; }catch(e){} });
+            updateCooldownUI();
+        }catch(e){ console.warn('hideOfflineUI error', e); }
+    }
+    async function checkIfDisabled(){
+        try{
+            const res = await fetch('time.php', { cache: 'no-store' });
+            if(!res.ok){ onlineChecked = true; onlineDisabled = false; hideOfflineUI(); return; }
+            const txt = (await res.text()).trim();
+            onlineChecked = true;
+            if(String(txt) === '0101'){
+                onlineDisabled = true;
+                showOfflineUI();
+            } else {
+                onlineDisabled = false;
+                hideOfflineUI();
+            }
+        }catch(e){
+            onlineChecked = true; onlineDisabled = false; hideOfflineUI();
+        }
+    }
+    async function ensureOnlineEnabled(){
+        if(!onlineChecked) await checkIfDisabled();
+        return !onlineDisabled;
+    }
+    function bindFirstInteractionCheck(){
+        let fired = false;
+        const once = async function(){ if(fired) return; fired = true; try{ await checkIfDisabled(); if(onlineDisabled) alert('Aufgrund der hohen Nachfrage ist die Online-Bestellung temporär nicht verfügbar'); }catch(e){} };
+        ['pointerdown','touchstart','keydown','mousedown'].forEach(ev => document.addEventListener(ev, once, {passive:true, capture:true}));
+    }
+    function fmt(n){return n.toFixed(2).replace('.',',') + ' €'}
+    function renderMenu(){
+        const el = document.getElementById('menuList');
+        el.innerHTML = menuData.map(cat => {
+            const items = cat.items.map(it => {
+                return `<div class="dish" role="listitem">
+        <div class="left">
+          <div style="font-weight:700;color:var(--red)">${escapeHtml(it.name)}</div>
+          <div class="small">${fmt(it.price)}</div>
+        </div>
+        <div>
+          <button class="btn" onclick="addToOrder('${it.id}', this)">+</button>
+        </div>
+      </div>`;
+            }).join('');
+            return `<details><summary>${escapeHtml(cat.category)}</summary>${items}</details>`;
+        }).join('');
+        const dishes = el.querySelectorAll('.dish');
+        dishes.forEach((d,i)=>setTimeout(()=>d.classList.add('visible'), i*40));
+    }
+    try{ bindFirstInteractionCheck(); }catch(e){}
+    async function addToOrder(id, btnElem){
+         if(!(await ensureOnlineEnabled())) return;
+          const item = findMenuItem(id);
+          if(!item) return;
+          const idx = order.findIndex(o=>o.id===id);
+          if(idx === -1){
+              order.push({id:item.id,name:item.name,price:item.price,qty:1,extras:''});
+          } else {
+              order[idx].qty++;
+          }
+          renderOrder();
+          try{ showAddFeedback(id, item.name, btnElem); }catch(e){}
+          try{
+              const btn = btnElem instanceof Element ? btnElem : null;
+              if(btn){
+                  btn.classList.remove('pressed');
+                  void btn.offsetWidth;
+                  btn.classList.add('pressed');
+                  setTimeout(()=>{ try{ btn.classList.remove('pressed'); }catch(e){} }, 220);
+              }
+          }catch(e){}
+           try{
+               const sel = `#orderWrapper [data-id="${CSS.escape(id)}"]`;
+               let el = document.querySelector(sel);
+               if(!el){
+                   setTimeout(()=>{
+                       try{
+                           const e2 = document.querySelector(sel);
+                           if(e2){
+                               e2.classList.remove('added');
+                               void e2.offsetWidth;
+                               e2.classList.add('added');
+                               setTimeout(()=>e2.classList.remove('added'), 900);
+                           }
+                       }catch(e){}
+                   }, 40);
+               } else {
+                   el.classList.remove('added');
+                   void el.offsetWidth;
+                   el.classList.add('added');
+                   setTimeout(()=>{ try{ el.classList.remove('added'); }catch(e){} }, 900);
+               }
+           }catch(e){}
+       }
+    function findMenuItem(id){
+         for(const c of menuData) for(const i of c.items) if(i.id===id) return i;
+         return null;
+     }
+    function renderOrder(){
+         const wrapper = document.getElementById('orderWrapper');
+         const empty = document.getElementById('emptyMsg');
+         if(order.length===0){
+             wrapper.innerHTML = '';
+             empty.style.display = 'block';
+         } else {
+             empty.style.display = 'none';
+             wrapper.innerHTML = order.map(o => `
+       <div class="item" data-id="${escapeAttr(o.id)}">
+         <div class="item-top">
+           <div style="flex:1">
+             <div style="font-weight:800;color:var(--red)">${escapeHtml(o.name)}</div>
+             <div class="small">Preis: ${fmt(o.price)} · Menge: ${o.qty}</div>
+           </div>
+           <div class="controls">
+             <button class="qty-btn" onclick="changeQty('${o.id}',-1)">−</button>
+             <div style="min-width:28px;text-align:center">${o.qty}</div>
+             <button class="qty-btn" onclick="changeQty('${o.id}',1)">+</button>
+             <button class="remove-btn" onclick="removeItem('${o.id}')">✕</button>
+           </div>
+         </div>
+         <input class="extras-input" type="text" placeholder="Zusatzwünsche, z. B. ohne Soße" value="${escapeAttr(o.extras)}" onchange="updateExtras('${o.id}', this.value)" />
+       </div>
+     `).join('');
+         }
+         updateTotal();
+         const newItems = wrapper.querySelectorAll('.item');
+         newItems.forEach((it,i)=>{it.classList.add('enter');setTimeout(()=>it.classList.remove('enter'), 320 + i*30)});
+     }
+    async function changeQty(id,delta){
+        if(!(await ensureOnlineEnabled())) return;
+        const i = order.findIndex(x=>x.id===id);
+        if(i===-1) return;
+        order[i].qty = Math.max(1, order[i].qty + delta);
+        renderOrder();
+    }
+    async function removeItem(id){
+        if(!(await ensureOnlineEnabled())) return;
+        order = order.filter(x=>x.id!==id);
+        renderOrder();
+    }
+    async function updateExtras(id, text){
+        if(!(await ensureOnlineEnabled())) return;
+        const i = order.findIndex(x=>x.id===id);
+        if(i===-1) return;
+        order[i].extras = text;
+    }
+    function updateTotal(){
+        const total = order.reduce((s,it)=>s + it.price * it.qty, 0);
+        document.getElementById('totalPrice').textContent = 'Gesamt: ' + fmt(total);
+        const btn = document.getElementById('checkoutBtn');
+        if(btn){
+            if(total > 0) btn.textContent = `✅ Bestellung abschließen · ${fmt(total)}`;
+            else btn.textContent = '✅ Bestellung abschließen';
+        }
+    }
+    function getLastOrderTs(){
+        const v = localStorage.getItem(LAST_ORDER_KEY);
+        return v ? parseInt(v, 10) : 0;
+    }
+    function setLastOrderTs(ts){
+        localStorage.setItem(LAST_ORDER_KEY, String(ts));
+    }
+    function remainingCooldown(){
+        const last = getLastOrderTs();
+        if(!last) return 0;
+        return Math.max(0, last + COOLDOWN_SECONDS - Math.floor(Date.now()/1000));
+    }
+    function updateCooldownUI(){
+        const el = document.getElementById('cooldownMsg');
+        const rem = remainingCooldown();
+        if(rem > 0){
+            const m = Math.floor(rem/60);
+            const s = rem % 60;
+            el.textContent = `Noch ${m}:${String(s).padStart(2,'0')} bis zur nächsten Bestellung.`;
+            document.getElementById('checkoutBtn').disabled = true;
+            document.getElementById('checkoutBtn').style.opacity = '0.7';
+        } else {
+            el.textContent = '';
+            document.getElementById('checkoutBtn').disabled = false;
+            document.getElementById('checkoutBtn').style.opacity = '1';
+        }
+    }
+    setInterval(updateCooldownUI,1000);
+    updateCooldownUI();
+    function getPhone(){
+        try{
+            const inp = document.getElementById('phoneInput');
+            const stored = localStorage.getItem(PHONE_KEY);
+            return (inp && inp.value) ? inp.value : (stored || '');
+        }catch(e){ return '' }
+    }
+    function setPhone(v){
+        try{ localStorage.setItem(PHONE_KEY, String(v||'')); }catch(e){}
+        const inp = document.getElementById('phoneInput'); if(inp) inp.value = v || '';
+    }
+    function normalizePhone(s){
+        if(!s) return '';
+        return String(s).replace(/[\s\-().]/g,'');
+    }
+    function isValidPhone(raw){
+        if(!raw) return false;
+        const s = normalizePhone(raw);
+        if(!/^\+?\d+$/.test(s)) return false;
+        const digits = s.replace(/\+/g,'').length;
+        return (digits >= 7 && digits <= 15);
+    }
+    function showPhoneMessage(msg){
+        const el = document.getElementById('phoneMsg'); if(!el) return; el.textContent = msg || '';
+    }
+
+    function debounce(fn, wait){ let t; return (...a)=>{ clearTimeout(t); t = setTimeout(()=>fn(...a), wait); } }
+
+    async function checkout(){
+        if(!(await ensureOnlineEnabled())){ alert('Aufgrund der hohen Nachfrage ist die Online-Bestellung temporär nicht verfügbar'); return; }
+        if(order.length===0){alert('Die Bestellliste ist leer.');return}
+        const rem = remainingCooldown();
+        if(rem > 0){alert('Warte noch ' + rem + ' Sekunden bevor du erneut bestellen kannst.');return}
+        const phone = getPhone().trim();
+        if(!isValidPhone(phone)){
+            showPhoneMessage('Bitte gib eine gültige Telefonnummer ein (z.B. +491771234567).');
+            const inp = document.getElementById('phoneInput'); if(inp) inp.focus();
+            return;
+        }
+        showPhoneMessage('');
+        setPhone(phone);
+
+        const payloadArr = order.map(o=>({id:o.id,name:o.name,menge:o.qty,extras:o.extras,price:o.price,phone:phone}));
+
+        const checkoutBtn = document.getElementById('checkoutBtn');
+        if(checkoutBtn){ checkoutBtn.disabled = true; checkoutBtn.classList.add('loading'); checkoutBtn.textContent = 'Sende Bestellung...'; checkoutBtn.style.opacity = '0.7'; }
+        try{
+            const res = await fetch('bestellen.php', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify(payloadArr)
+            });
+            const json = await (async ()=>{ try { return await res.json(); } catch(e){ return null; } })();
+            if(json && json.status === 'success'){
+                 setLastOrderTs(Math.floor(Date.now()/1000));
+                 bestellId = json.id;
+                try{ localStorage.removeItem('kara_pending_order'); }catch(err){}
+                 alert('✅ ' + (json.message || 'Bestellung erfolgreich') + (bestellId ? ('\nDeine Bestellnummer: ' + bestellId) : ''));
+                 document.getElementById('head').textContent = "Karadeniz 55 — Bestellen (Bestellnummer: " + bestellId + ")";
+                 order = [];
+                 renderOrder();
+                 updateCooldownUI();
+                 try {
+                    let t = '20';
+                    const resTime = await fetch('time.php');
+                    if (resTime.ok) {
+                        try {
+                            const txt = await resTime.text();
+                            t = (txt || '').trim() || '20';
+                        } catch (parseErr) {}
+                    }
+                    showOrderMeta(t, bestellId);
+                    try { localStorage.setItem('kara_last_order_meta', JSON.stringify({ time: t, id: bestellId })); }catch(e){}
+                } catch (fetchErr) {
+                    const tFallback = '20';
+                    showOrderMeta(tFallback, bestellId);
+                    try { localStorage.setItem('kara_last_order_meta', JSON.stringify({ time: tFallback, id: bestellId })); }catch(e){}
+                }
+            } else {
+                alert('⚠ ' + (json && json.message ? json.message : 'Fehler beim Übermitteln'));
+            }
+        }catch(e){
+            try{
+                const pending = { order: order, phone: (typeof phone !== 'undefined' ? phone : getPhone()) };
+                localStorage.setItem('kara_pending_order', JSON.stringify(pending));
+            }catch(storageErr){}
+            alert('Fehler beim Senden der Bestellung. Die Bestellung wurde gespeichert und die Seite wird neu geladen. Bitte klicke danach erneut auf "Bestellen".');
+            try{ location.reload(); }catch(reloadErr){}
+        } finally {
+            if(checkoutBtn){ checkoutBtn.disabled = false; checkoutBtn.classList.remove('loading'); updateTotal(); }
+        }
+    }
+    function escapeHtml(str){return String(str||'').replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]))}
+    function escapeAttr(s){return escapeHtml(s).replace(/\n/g,' ')}
+    try{ const saved = localStorage.getItem(PHONE_KEY); if(saved && document.getElementById('phoneInput')) document.getElementById('phoneInput').value = saved; }catch(e){}
+    try{
+        const rawPending = localStorage.getItem('kara_pending_order');
+        if(rawPending){
+            const obj = JSON.parse(rawPending);
+            if(obj && Array.isArray(obj.order) && obj.order.length > 0){
+                order = obj.order.map(o => ({ id: o.id || o.name, name: o.name, price: Number(o.price) || 0, qty: Number(o.qty) || Number(o.menge) || 1, extras: o.extras || '' }));
+                renderOrder();
+                if(obj.phone) setPhone(obj.phone);
+                const cm = document.getElementById('cooldownMsg');
+                if(cm) cm.textContent = 'Wiederhergestellte Bestellung geladen. Prüfe deine Angaben und klicke erneut auf "Bestellen".';
+            }
+        }
+    }catch(e){}
+    function showOrderMeta(timeStr, id){
+        const el = document.getElementById('orderMeta');
+        if(!el) return;
+        const safeTime = String(timeStr || '').trim();
+        el.textContent = (safeTime ? (safeTime + ' fertig') : '') + (id ? (' · Bestellnummer: ' + id) : '');
+    }
+    (function(){
+        try{
+            const raw = localStorage.getItem('kara_last_order_meta');
+            if(raw){
+                const obj = JSON.parse(raw) || {};
+                if(obj.time){
+                    let timeStr = String(obj.time || '20').trim();
+                    if(!timeStr.toLowerCase().includes('min')){
+                        timeStr = timeStr.replace(/\s*min/i,'') + ' Min';
+                    }
+                    obj.time = timeStr;
+                }
+                if(obj && (obj.time || obj.id)){
+                    showOrderMeta(obj.time || '20', obj.id || '');
+                    if(obj.id){ const head = document.getElementById('head'); if(head) head.textContent = "Karadeniz 55 — Bestellen (Bestellnummer: " + obj.id + ")"; }
+                }
+            }
+        }catch(e){}
+    })();
+    const phoneInp = document.getElementById('phoneInput');
+    if(phoneInp){
+        phoneInp.addEventListener('input', ()=>{
+            const v = phoneInp.value || '';
+            if(v.length === 0) { showPhoneMessage(''); return; }
+            if(!isValidPhone(v)) showPhoneMessage('Ungültiges Format'); else showPhoneMessage('');
+            debounce(() => setPhone(phoneInp.value), 350)();
+        });
+    }
+    renderMenu();
+    renderOrder();
+
+    function showAddFeedback(id, name, btnElem){
+        try{
+            const wrapperSel = `#orderWrapper [data-id="${CSS.escape(id)}"]`;
+            const el = document.querySelector(wrapperSel);
+           // if(el){
+           //     try{ el.scrollIntoView({behavior:'smooth', block:'center'}); }catch(e){}
+         //       el.classList.remove('added'); void el.offsetWidth; el.classList.add('added');
+          //      setTimeout(()=>{ try{ el.classList.remove('added'); }catch(e){} }, 1200);
+          //  }
+            const toast = document.getElementById('karaToast');
+            if(toast){ toast.textContent = (name ? name + ' hinzugefügt' : 'Artikel hinzugefügt'); toast.classList.add('show'); toast.setAttribute('aria-hidden','false'); setTimeout(()=>{ try{ toast.classList.remove('show'); toast.setAttribute('aria-hidden','true'); }catch(e){} }, 1400); }
+            if(btnElem instanceof Element){ try{ btnElem.animate([{transform:'scale(1.05)'},{transform:'scale(1)'}],{duration:240, easing:'cubic-bezier(.2,.9,.2,1)'}); }catch(e){} }
+        }catch(e){ /* ignore */ }
+    }
+</script>
+<footer style="margin:18px auto 40px;max-width:1100px;text-align:center;color:#6a0000;font-size:0.9rem;padding:6px 12px;">
+  <a href="impressum.html" style="color:inherit;text-decoration:none;margin:0 6px;">Impressum</a> ·
+  <a href="datenschutzerklaerung.html" style="color:inherit;text-decoration:none;margin:0 6px;">Datenschutzerklärung</a>
+  <div style="margin-top:6px;color:#8b0000;">© Karadeniz 55</div>
+</footer>
+</body>
+</html>
